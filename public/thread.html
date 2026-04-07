@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Thread</title>
+</head>
+<body>
+
+<h1>Thread</h1>
+
+<div id="posts"></div>
+
+<h3>Antwort schreiben</h3>
+<form id="postForm">
+  <textarea id="content" required></textarea>
+  <br><br>
+  <button type="submit">Posten</button>
+</form>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const threadId = urlParams.get('id');
+
+async function loadPosts() {
+  const res = await fetch('/api/posts?thread_id=' + threadId);
+  const data = await res.json();
+
+  const container = document.getElementById('posts');
+  container.innerHTML = '';
+
+  data.forEach(p => {
+    const el = document.createElement('div');
+    el.innerText = p.content;
+    container.appendChild(el);
+  });
+}
+
+document.getElementById('postForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const content = document.getElementById('content').value;
+
+  await fetch('/api/posts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ thread_id: threadId, content })
+  });
+
+  loadPosts();
+});
+
+loadPosts();
+</script>
+
+</body>
+</html>

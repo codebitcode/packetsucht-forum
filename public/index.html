@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Packetsucht Forum</title>
+</head>
+<body>
+
+<h1>📦 Packetsucht Forum</h1>
+
+<a href="/login.html">Login</a> |
+<a href="/register.html">Register</a>
+
+<h2>Threads</h2>
+
+<div id="threads"></div>
+
+<script>
+async function loadThreads() {
+  const res = await fetch('/api/threads');
+  const data = await res.json();
+
+  const container = document.getElementById('threads');
+  container.innerHTML = '';
+
+  data.forEach(t => {
+    const el = document.createElement('div');
+    el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
+    container.appendChild(el);
+  });
+}
+
+loadThreads();
+</script>
+
+</body>
+</html>
