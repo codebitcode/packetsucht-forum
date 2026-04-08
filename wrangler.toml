@@ -1,0 +1,10 @@
+name = "packetsucht-forum"
+main = "_worker.js"
+compatibility_date = "2024-01-01"
+
+[assets]
+directory = "./public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "packetsucht-db"
