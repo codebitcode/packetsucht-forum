@@ -2,7 +2,10 @@ export async function onRequest(context) {
   const db = context.env.DB;
 
   if (context.request.method === "GET") {
-    const { results } = await db.prepare("SELECT * FROM threads ORDER BY id DESC").all();
+    const { results } = await db.prepare(
+      "SELECT * FROM threads ORDER BY id DESC"
+    ).all();
+
     return Response.json(results);
   }
 
