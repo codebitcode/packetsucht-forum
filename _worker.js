@@ -2,7 +2,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/api/threads") {
+    if (url.pathname.startsWith("/api/threads")) {
       if (request.method === "GET") {
         const { results } = await env.DB.prepare(
           "SELECT * FROM threads ORDER BY id DESC"
@@ -27,6 +27,8 @@ export default {
           headers: { "Content-Type": "application/json" },
         });
       }
+
+      return new Response("Method not allowed", { status: 405 });
     }
 
     return env.ASSETS.fetch(request);
