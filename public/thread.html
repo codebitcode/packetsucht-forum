@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Thread</title>
 </head>
 <body>
 
-<h1>Thread</h1>
+<h1>📦 Thread</h1>
+<a href="/index.html">← Zurück</a>
+
+<h2 id="threadTitle">Lade...</h2>
 
 <div id="posts"></div>
 
 <h3>Antwort schreiben</h3>
 <form id="postForm">
-  <textarea id="content" required></textarea>
+  <textarea id="content" required rows="5" cols="50"></textarea>
   <br><br>
   <button type="submit">Posten</button>
 </form>
@@ -19,6 +23,14 @@
 <script>
 const urlParams = new URLSearchParams(window.location.search);
 const threadId = urlParams.get('id');
+
+async function loadThread() {
+  const res = await fetch('/api/threads');
+  const threads = await res.json();
+
+  const thread = threads.find(t => String(t.id) === String(threadId));
+  document.getElementById('threadTitle').textContent = thread ? thread.title : 'Thread nicht gefunden';
+}
 
 async function loadPosts() {
   const res = await fetch('/api/posts?thread_id=' + threadId);
@@ -29,7 +41,8 @@ async function loadPosts() {
 
   data.forEach(p => {
     const el = document.createElement('div');
-    el.innerText = p.content;
+    el.style.marginBottom = '12px';
+    el.innerHTML = `<b>User ${p.user_id || 1}:</b><br>${p.content}`;
     container.appendChild(el);
   });
 }
@@ -39,15 +52,23 @@ document.getElementById('postForm').addEventListener('submit', async (e) => {
 
   const content = document.getElementById('content').value;
 
+  if (!content.trim()) return;
+
   await fetch('/api/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ thread_id: threadId, content })
+    body: JSON.stringify({
+      thread_id: threadId,
+      user_id: 1,
+      content: content
+    })
   });
 
+  document.getElementById('content').value = '';
   loadPosts();
 });
 
+loadThread();
 loadPosts();
 </script>
 
