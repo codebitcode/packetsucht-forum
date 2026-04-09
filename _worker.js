@@ -13,20 +13,31 @@ export default {
         });
       }
 
-      if (request.method === "POST") {
-        const body = await request.json();
-        const { title, user_id } = body;
+if (request.method === "POST") {
+  let body;
 
-        await env.DB.prepare(
-          "INSERT INTO threads (title, user_id) VALUES (?, ?)"
-        )
-          .bind(title, user_id)
-          .run();
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response("invalid json", { status: 400 });
+  }
 
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+  const { title, user_id } = body || {};
+
+  if (!title || !user_id) {
+    return new Response("missing data", { status: 400 });
+  }
+
+  await env.DB.prepare(
+    "INSERT INTO threads (title, user_id) VALUES (?, ?)"
+  )
+    .bind(title, user_id)
+    .run();
+
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
       return new Response("Method not allowed", { status: 405 });
     }
