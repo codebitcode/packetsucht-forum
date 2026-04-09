@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<meta charset="UTF-8">
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Packetsucht Forum</title>
 </head>
 <body>
@@ -10,6 +10,11 @@
 
 <a href="/login.html">Login</a> |
 <a href="/register.html">Register</a>
+
+<h2>Neuen Thread erstellen</h2>
+
+<input id="titleInput" type="text" placeholder="Titel eingeben">
+<button onclick="createThread()">Absenden</button>
 
 <h2>Threads</h2>
 
@@ -28,6 +33,24 @@ async function loadThreads() {
     el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
     container.appendChild(el);
   });
+}
+
+async function createThread() {
+  const title = document.getElementById('titleInput').value;
+
+  if (!title) return;
+
+  await fetch('/api/threads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: title,
+      user_id: 1
+    })
+  });
+
+  document.getElementById('titleInput').value = '';
+  loadThreads();
 }
 
 loadThreads();
