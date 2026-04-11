@@ -50,19 +50,30 @@ async function loadPosts() {
 document.getElementById('postForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const content = document.getElementById('content').value;
+  const content = document.getElementById('content').value.trim();
+  if (!content) return;
 
-  if (!content.trim()) return;
-
-  await fetch('/api/posts', {
+  const res = await fetch('/api/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      thread_id: threadId,
+      thread_id: Number(threadId),
       user_id: 1,
       content: content
     })
   });
+
+  const text = await res.text();
+  console.log('POST /api/posts:', res.status, text);
+
+  if (!res.ok) {
+    alert('Fehler: ' + text);
+    return;
+  }
+
+  document.getElementById('content').value = '';
+  await loadPosts();
+});
 
   document.getElementById('content').value = '';
   loadPosts();
