@@ -1,22 +1,24 @@
-export async function onRequest(context) {
-  const db = context.env.DB;
+document.getElementById('postForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-  if (context.request.method === "GET") {
-    const { results } = await db.prepare(
-      "SELECT * FROM threads ORDER BY id DESC"
-    ).all();
+  const content = document.getElementById('content').value.trim();
+  if (!content) return;
 
-    return Response.json(results);
-  }
+  const res = await fetch('/api/posts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      thread_id: Number(threadId),
+      user_id: 1,
+      content: content
+    })
+  });
 
-  if (context.request.method === "POST") {
-    const body = await context.request.json();
-    const { title, user_id } = body;
+  const text = await res.text();
+  alert(text);
 
-    await db.prepare(
-      "INSERT INTO threads (title, user_id) VALUES (?, ?)"
-    ).bind(title, user_id).run();
+  if (!res.ok) return;
 
-    return Response.json({ success: true });
-  }
-}
+  document.getElementById('content').value = '';
+  loadPosts();
+});
