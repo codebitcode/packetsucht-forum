@@ -306,14 +306,18 @@ export default {
                     return new Response("thread_id fehlt", { status: 400 });
                 }
 
-                const { results } = await env.DB.prepare(
-                    "SELECT * FROM posts WHERE thread_id = ? ORDER BY id ASC"
+               const { results } = await env.DB.prepare(
+                  `SELECT posts.*, users.username
+                   FROM posts
+                   JOIN users ON posts.user_id = users.id
+                   WHERE posts.thread_id = ?
+                   ORDER BY posts.id ASC`
                 ).bind(threadId).all();
 
                 return new Response(JSON.stringify(results), {
                     headers: { "Content-Type": "application/json" },
                 });
-            }
+            }  
 
             if (request.method === "POST") {
                 let body;
