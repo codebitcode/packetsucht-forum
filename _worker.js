@@ -179,6 +179,27 @@ export default {
         }
 
 
+        /////////Logout
+
+        if (url.pathname === "/api/logout") {
+            const cookie = request.headers.get("cookie") || "";
+            const match = cookie.match(/session_id=([^;]+)/);
+
+            if (match) {
+                const sessionId = match[1];
+
+                await env.DB.prepare(
+                    "DELETE FROM sessions WHERE id = ?"
+                ).bind(sessionId).run();
+            }
+
+            return new Response("ok", {
+                headers: {
+                    "Set-Cookie": "session_id=; Path=/; Max-Age=0"
+                }
+            });
+        }
+
         ////////api/me
         // /////// ME (eingeloggt prüfen) ///////
 
