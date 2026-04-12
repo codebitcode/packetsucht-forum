@@ -242,9 +242,9 @@ export default {
 
         if (url.pathname.startsWith("/api/threads")) {
             if (request.method === "GET") {
-                const { results } = await env.DB.prepare(
-                    "SELECT * FROM threads ORDER BY id DESC"
-                ).all();
+               const { results } = await env.DB.prepare(
+                  "SELECT * FROM threads WHERE user_id > ? ORDER BY id DESC"
+                    ).bind(10).all();
 
                 return new Response(JSON.stringify(results), {
                     headers: { "Content-Type": "application/json" },
