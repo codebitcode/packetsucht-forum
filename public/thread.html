@@ -12,7 +12,7 @@
 <h2 id="threadTitle">Lade...</h2>
 
 <div id="posts"></div>
-
+<div id="error" style="color:red;"></div>
 <h3>Antwort schreiben</h3>
 <form id="postForm">
   <textarea id="content" required rows="5" cols="50"></textarea>
@@ -52,23 +52,23 @@ document.getElementById('postForm').addEventListener('submit', async (e) => {
 
   const content = document.getElementById('content').value.trim();
   if (!content) return;
-
+document.getElementById('error').innerText = '';
   const res = await fetch('/api/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    
     body: JSON.stringify({
-      thread_id: Number(threadId),
-      user_id: 1,
-      content: content
-    })
+    thread_id: Number(threadId),
+    content: content
+  })
   });
 
   const text = await res.text();
   console.log('POST /api/posts:', res.status, text);
 
   if (!res.ok) {
-    alert('Fehler: ' + text);
-    return;
+  document.getElementById('error').innerText = text;
+  return;
   }
 
   document.getElementById('content').value = '';
