@@ -46,6 +46,7 @@ async function loadPosts() {
     container.appendChild(el);
   });
 }
+
 document.getElementById('postForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -72,10 +73,6 @@ document.getElementById('postForm').addEventListener('submit', async (e) => {
 
   document.getElementById('content').value = '';
   await loadPosts();
-});
-
-  document.getElementById('content').value = '';
-  loadPosts();
 });
 
 loadThread();
