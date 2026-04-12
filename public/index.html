@@ -8,8 +8,7 @@
 
 <h1>📦 Packetsucht Forum</h1>
 
-<a href="/login.html">Login</a> |
-<a href="/register.html">Register</a>
+<div id="auth"></div>
 
 <h2>Neuen Thread erstellen</h2>
 
@@ -36,7 +35,7 @@ async function loadThreads() {
 }
 
 async function createThread() {
-  const title = document.getElementById('titleInput').value;
+  const title = document.getElementById('titleInput').value.trim();
 
   if (!title) return;
 
@@ -53,7 +52,32 @@ async function createThread() {
   loadThreads();
 }
 
+async function checkLogin() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+
+  const el = document.getElementById('auth');
+
+  if (data.loggedIn) {
+    el.innerHTML = `
+      ${data.user.username} |
+      <a href="#" onclick="logout(); return false;">Logout</a>
+    `;
+  } else {
+    el.innerHTML = `
+      <a href="/login.html">Login</a> |
+      <a href="/register.html">Register</a>
+    `;
+  }
+}
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  location.reload();
+}
+
 loadThreads();
+checkLogin();
 </script>
 
 </body>
