@@ -195,7 +195,7 @@ export default {
 
             return new Response("ok", {
                 headers: {
-                    "Set-Cookie": "session_id=; Path=/; Max-Age=0"
+                    "Set-Cookie": "session_id=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
                 }
             });
         }
@@ -237,7 +237,9 @@ export default {
             });
         }
 
-        ////////////threads
+        ////////////threads/////////////////////
+
+
         if (url.pathname.startsWith("/api/threads")) {
             if (request.method === "GET") {
                 const { results } = await env.DB.prepare(
@@ -258,16 +260,31 @@ export default {
                     return new Response("invalid json", { status: 400 });
                 }
 
-                const { title, user_id } = body || {};
+                const { title } = body || {};
 
-                if (!title || !user_id) {
+                const cookie = request.headers.get("cookie") || "";
+                const match = cookie.match(/session_id=([^;]+)/);
+
+                if (!match) {
+                    return new Response("not logged in", { status: 401 });
+                }
+
+                const session = await env.DB.prepare(
+                    "SELECT user_id FROM sessions WHERE id = ?"
+                ).bind(match[1]).first();
+
+                if (!session) {
+                    return new Response("invalid session", { status: 401 });
+                }
+
+                if (!title) {
                     return new Response("missing data", { status: 400 });
                 }
 
                 await env.DB.prepare(
                     "INSERT INTO threads (title, user_id) VALUES (?, ?)"
                 )
-                    .bind(title, user_id)
+                    .bind(title, session.user_id)
                     .run();
 
                 return new Response(JSON.stringify({ success: true }), {
@@ -277,6 +294,9 @@ export default {
 
             return new Response("Method not allowed", { status: 405 });
         }
+
+
+        /////////////////Post
 
         if (url.pathname.startsWith("/api/posts")) {
             if (request.method === "GET") {
@@ -304,7 +324,22 @@ export default {
                     return new Response("invalid json", { status: 400 });
                 }
 
-                const { thread_id, user_id, content } = body || {};
+                const { thread_id, content } = body || {};
+                const cookie = request.headers.get("cookie") || "";
+                const match = cookie.match(/session_id=([^;]+)/);
+
+                if (!match) {
+                    return new Response("not logged in", { status: 401 });
+                }
+
+                const session = await env.DB.prepare(
+                    "SELECT user_id FROM sessions WHERE id = ?"
+                ).bind(match[1]).first();
+
+                if (!session) {
+                    return new Response("invalid session", { status: 401 });
+                }
+
 
                 if (!thread_id || !content) {
                     return new Response("missing data", { status: 400 });
@@ -313,7 +348,7 @@ export default {
                 await env.DB.prepare(
                     "INSERT INTO posts (thread_id, user_id, content) VALUES (?, ?, ?)"
                 )
-                    .bind(Number(thread_id), Number(user_id) || 1, content)
+                    .bind(Number(thread_id), session.user_id, content)
                     .run();
 
                 return new Response(JSON.stringify({ success: true }), {
