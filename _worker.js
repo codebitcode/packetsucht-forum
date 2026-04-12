@@ -99,22 +99,22 @@ export default {
             let result;
 
             try {
-              password_hash = await hashPassword(password);
+                password_hash = await hashPassword(password);
 
-              result = await env.DB.prepare(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)"
-              ).bind(username, password_hash).run();
+                result = await env.DB.prepare(
+                    "INSERT INTO users (username, password_hash) VALUES (?, ?)"
+                ).bind(username, password_hash).run();
             } catch (e) {
-              return new Response("register error: " + e.message, { status: 500 });
+                return new Response("register error: " + e.message, { status: 500 });
             }
 
             return new Response(JSON.stringify({
-              success: true,
-              user_id: result.meta?.last_row_id ?? null
+                success: true,
+                user_id: result.meta?.last_row_id ?? null
             }), {
-              headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" }
             });
-          }
+        }
 
         ///////////Passwort///////////
         //////Login/////////
@@ -162,6 +162,44 @@ export default {
                 success: true,
                 user_id: user.id,
                 username: user.username
+            }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
+
+        ////////api/me
+        // /////// ME (eingeloggt prüfen) ///////
+
+        if (url.pathname.startsWith("/api/me")) {
+            const cookie = request.headers.get("cookie") || "";
+            const match = cookie.match(/session_id=([^;]+)/);
+
+            if (!match) {
+                return new Response(JSON.stringify({ loggedIn: false }), {
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+
+            const sessionId = match[1];
+
+            const session = await env.DB.prepare(
+                "SELECT user_id FROM sessions WHERE id = ?"
+            ).bind(sessionId).first();
+
+            if (!session) {
+                return new Response(JSON.stringify({ loggedIn: false }), {
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+
+            const user = await env.DB.prepare(
+                "SELECT id, username FROM users WHERE id = ?"
+            ).bind(session.user_id).first();
+
+            return new Response(JSON.stringify({
+                loggedIn: true,
+                user
             }), {
                 headers: { "Content-Type": "application/json" }
             });
