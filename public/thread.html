@@ -42,7 +42,7 @@ async function loadPosts() {
   data.forEach(p => {
     const el = document.createElement('div');
     el.style.marginBottom = '12px';
-    el.innerHTML = `<b>User ${p.user_id || 1}:</b><br>${p.content}`;
+    el.innerHTML = `<b>${p.username}:</b><br>${p.content}`;
     container.appendChild(el);
   });
 }
