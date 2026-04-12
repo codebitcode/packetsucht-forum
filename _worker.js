@@ -95,19 +95,26 @@ export default {
                 return new Response("username exists", { status: 400 });
             }
 
-            const password_hash = await hashPassword(password);
+            let password_hash;
+            let result;
 
-            const result = await env.DB.prepare(
+            try {
+              password_hash = await hashPassword(password);
+
+              result = await env.DB.prepare(
                 "INSERT INTO users (username, password_hash) VALUES (?, ?)"
-            ).bind(username, password_hash).run();
+              ).bind(username, password_hash).run();
+            } catch (e) {
+              return new Response("register error: " + e.message, { status: 500 });
+            }
 
             return new Response(JSON.stringify({
-                success: true,
-                user_id: result.meta.last_row_id
+              success: true,
+              user_id: result.meta?.last_row_id ?? null
             }), {
-                headers: { "Content-Type": "application/json" }
+              headers: { "Content-Type": "application/json" }
             });
-        }
+          }
 
         ///////////Passwort///////////
         //////Login/////////
