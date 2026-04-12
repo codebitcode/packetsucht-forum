@@ -158,12 +158,23 @@ export default {
                 return new Response("invalid login", { status: 401 });
             }
 
+            const sessionId = crypto.randomUUID();
+
+            await env.DB.prepare(
+                "INSERT INTO sessions (id, user_id) VALUES (?, ?)"
+            ).bind(sessionId, user.id).run();
+
             return new Response(JSON.stringify({
                 success: true,
-                user_id: user.id,
-                username: user.username
+                user: {
+                    id: user.id,
+                    username: user.username
+                }
             }), {
-                headers: { "Content-Type": "application/json" }
+                headers: {
+                    "Content-Type": "application/json",
+                    "Set-Cookie": `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Lax`
+                }
             });
         }
 
