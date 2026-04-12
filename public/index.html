@@ -39,14 +39,18 @@ async function createThread() {
 
   if (!title) return;
 
-  await fetch('/api/threads', {
+  const res = await fetch('/api/threads', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      title: title,
-      user_id: 1
+      title: title
     })
   });
+
+  if (!res.ok) {
+    alert(await res.text());
+    return;
+  }
 
   document.getElementById('titleInput').value = '';
   loadThreads();
