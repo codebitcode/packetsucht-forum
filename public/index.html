@@ -25,29 +25,6 @@
 
   <script>
 
-    async function upload() {
-      const fileInput = document.getElementById("fileInput");
-      const file = fileInput.files[0];
-
-      if (!file) {
-        alert("keine Datei");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await res.json();
-      console.log(data);
-
-      alert("hochgeladen");
-    }
-
     async function loadThreads() {
       const res = await fetch('/api/threads');
       const data = await res.json();
