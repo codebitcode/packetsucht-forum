@@ -92,7 +92,20 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
+        if (url.pathname.startsWith("/api/image/")) {
+            const fileName = decodeURIComponent(url.pathname.replace("/api/image/", ""));
+            const object = await env.IMAGES_BUCKET.get(fileName);
 
+            if (!object) {
+                return new Response("Not found", { status: 404 });
+            }
+
+            return new Response(object.body, {
+                headers: {
+                    "Content-Type": object.httpMetadata?.contentType || "image/jpeg"
+                }
+            });
+        }
         ///////////Passwort///////////
 
 
@@ -460,7 +473,7 @@ export default {
                 }
 
 
-                if (!thread_id || !content) {
+                if (!thread_id || (!content && !image)) {
                     return new Response("missing data", { status: 400 });
                 }
 
