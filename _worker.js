@@ -502,11 +502,11 @@ export default {
                 "INSERT INTO images (filename, status) VALUES (?, ?)"
             ).bind(fileName, "pending").run();
 
-            return new Response(JSON.stringify({ success: true }), {
+            return new Response(JSON.stringify({ success: true, filename: fileName }), {
                 headers: { "Content-Type": "application/json" }
             });
         }
-        
+
         return env.ASSETS.fetch(request);
     },
 };
