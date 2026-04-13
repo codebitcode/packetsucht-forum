@@ -17,130 +17,129 @@
   <div id="error" style="color:red;"></div>
   <h3>Antwort schreiben</h3>
   <form id="postForm">
-    <textarea id="content" required rows="5" cols="50"></textarea>
-    <br><br>
+    <textarea id="content" rows="5" cols="50"></textarea> <br><br>
     <button type="submit">Posten</button>
     <input type="file" id="fileInput" accept="image/*">
     <br><br>
   </form>
 
   <script>
-  const urlParams = new URLSearchParams(window.location.search);
-  const threadId = urlParams.get('id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const threadId = urlParams.get('id');
 
-  async function loadThread() {
-    const res = await fetch('/api/threads');
-    const threads = await res.json();
+    async function loadThread() {
+      const res = await fetch('/api/threads');
+      const threads = await res.json();
 
-    const thread = threads.find(t => String(t.id) === String(threadId));
-    document.getElementById('threadTitle').textContent = thread ? thread.title : 'Thread nicht gefunden';
-  }
-
-  async function checkLogin() {
-    const res = await fetch('/api/me');
-    const data = await res.json();
-
-    if (!data.loggedIn) {
-      document.getElementById('postForm').style.display = 'none';
-      document.getElementById('error').innerText = 'Bitte einloggen';
+      const thread = threads.find(t => String(t.id) === String(threadId));
+      document.getElementById('threadTitle').textContent = thread ? thread.title : 'Thread nicht gefunden';
     }
-  }
 
-  async function loadPosts() {
-    const res = await fetch('/api/posts?thread_id=' + Number(threadId));
-    const data = await res.json();
+    async function checkLogin() {
+      const res = await fetch('/api/me');
+      const data = await res.json();
 
-    const container = document.getElementById('posts');
-    container.innerHTML = '';
+      if (!data.loggedIn) {
+        document.getElementById('postForm').style.display = 'none';
+        document.getElementById('error').innerText = 'Bitte einloggen';
+      }
+    }
 
-    data.forEach(p => {
-      const el = document.createElement('div');
-      el.style.marginBottom = '12px';
+    async function loadPosts() {
+      const res = await fetch('/api/posts?thread_id=' + Number(threadId));
+      const data = await res.json();
 
-      const name = document.createElement('b');
-      name.textContent = p.username + ':';
+      const container = document.getElementById('posts');
+      container.innerHTML = '';
 
-      const text = document.createElement('div');
-      text.textContent = p.content || '';
+      data.forEach(p => {
+        const el = document.createElement('div');
+        el.style.marginBottom = '12px';
 
-      el.appendChild(name);
-      el.appendChild(document.createElement('br'));
-      el.appendChild(text);
+        const name = document.createElement('b');
+        name.textContent = p.username + ':';
 
-      if (p.image) {
-        const img = document.createElement('img');
-        img.src = '/api/image/' + encodeURIComponent(p.image);
-        img.style.maxWidth = '300px';
-        img.style.display = 'block';
-        img.style.marginTop = '8px';
-        el.appendChild(img);
+        const text = document.createElement('div');
+        text.textContent = p.content || '';
+
+        el.appendChild(name);
+        el.appendChild(document.createElement('br'));
+        el.appendChild(text);
+
+        if (p.image) {
+          const img = document.createElement('img');
+          img.src = '/api/image/' + encodeURIComponent(p.image);
+          img.style.maxWidth = '300px';
+          img.style.display = 'block';
+          img.style.marginTop = '8px';
+          el.appendChild(img);
+        }
+
+        container.appendChild(el);
+      });
+    }
+
+    document.getElementById('postForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const content = document.getElementById('content').value.trim();
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!content && !file) return;
+
+      document.getElementById('error').innerText = '';
+
+      let uploadedFile = null;
+
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const uploadText = await uploadRes.text();
+        console.log('POST /api/upload:', uploadRes.status, uploadText);
+
+        if (!uploadRes.ok) {
+          document.getElementById('error').innerText = uploadText;
+          return;
+        }
+
+        const uploadData = JSON.parse(uploadText);
+        uploadedFile = uploadData.filename;
       }
 
-      container.appendChild(el);
-    });
-  }
-
-  document.getElementById('postForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const content = document.getElementById('content').value.trim();
-    const fileInput = document.getElementById('fileInput');
-    const file = fileInput.files[0];
-
-    if (!content && !file) return;
-
-    document.getElementById('error').innerText = '';
-
-    let uploadedFile = null;
-
-    if (file) {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const uploadRes = await fetch('/api/upload', {
+      const res = await fetch('/api/posts', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thread_id: Number(threadId),
+          content: content,
+          image: uploadedFile
+        })
       });
 
-      const uploadText = await uploadRes.text();
-      console.log('POST /api/upload:', uploadRes.status, uploadText);
+      const text = await res.text();
+      console.log('POST /api/posts:', res.status, text);
 
-      if (!uploadRes.ok) {
-        document.getElementById('error').innerText = uploadText;
+      if (!res.ok) {
+        document.getElementById('error').innerText = text;
         return;
       }
 
-      const uploadData = JSON.parse(uploadText);
-      uploadedFile = uploadData.filename;
-    }
-
-    const res = await fetch('/api/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        thread_id: Number(threadId),
-        content: content,
-        image: uploadedFile
-      })
+      document.getElementById('content').value = '';
+      fileInput.value = '';
+      await loadPosts();
     });
 
-    const text = await res.text();
-    console.log('POST /api/posts:', res.status, text);
-
-    if (!res.ok) {
-      document.getElementById('error').innerText = text;
-      return;
-    }
-
-    document.getElementById('content').value = '';
-    fileInput.value = '';
-    await loadPosts();
-  });
-
-  loadThread();
-  loadPosts();
-  checkLogin();
-</script>
+    loadThread();
+    loadPosts();
+    checkLogin();
+  </script>
 
 </body>
 
