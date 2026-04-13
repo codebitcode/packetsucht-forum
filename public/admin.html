@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Admin</title>
+</head>
+<body>
+
+<h1>🛠 Admin – Bilder prüfen</h1>
+
+<div id="status"></div>
+<div id="images"></div>
+
+<script>
+async function checkAdmin() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+
+  if (!data.loggedIn || !data.isAdmin) {
+    document.getElementById('status').innerText = 'Kein Zugriff';
+    return false;
+  }
+
+  document.getElementById('status').innerText = 'Admin: ' + data.user.username;
+  return true;
+}
+
+async function loadImages() {
+  const res = await fetch('/api/images?status=pending');
+  const data = await res.json();
+
+  const container = document.getElementById('images');
+  container.innerHTML = '';
+
+  data.forEach(img => {
+    const el = document.createElement('div');
+    el.style.marginBottom = '20px';
+
+    el.innerHTML = `
+      <img src="${img.image_url}" width="200"><br>
+      User: ${img.user_id}<br><br>
+      <button onclick="approve(${img.id})">Freigeben</button>
+      <button onclick="reject(${img.id})">Ablehnen</button>
+    `;
+
+    container.appendChild(el);
+  });
+}
+
+async function approve(id) {
+  await fetch('/api/images/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  loadImages();
+}
+
+async function reject(id) {
+  await fetch('/api/images/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  loadImages();
+}
+
+(async () => {
+  const ok = await checkAdmin();
+  if (ok) loadImages();
+})();
+</script>
+
+</body>
+</html>
