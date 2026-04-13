@@ -443,7 +443,7 @@ export default {
                     return new Response("invalid json", { status: 400 });
                 }
 
-                const { thread_id, content } = body || {};
+                const { thread_id, content, image } = body || {};
                 const cookie = request.headers.get("cookie") || "";
                 const match = cookie.match(/session_id=([^;]+)/);
 
@@ -465,9 +465,9 @@ export default {
                 }
 
                 await env.DB.prepare(
-                    "INSERT INTO posts (thread_id, user_id, content) VALUES (?, ?, ?)"
+                    "INSERT INTO posts (thread_id, user_id, content, image) VALUES (?, ?, ?, ?)"
                 )
-                    .bind(Number(thread_id), session.user_id, content)
+                    .bind(Number(thread_id), session.user_id, content, image || null)
                     .run();
 
                 return new Response(JSON.stringify({ success: true }), {
