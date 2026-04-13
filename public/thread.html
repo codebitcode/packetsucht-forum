@@ -95,6 +95,7 @@
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('thread_id', threadId);
 
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
