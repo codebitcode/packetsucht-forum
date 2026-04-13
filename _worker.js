@@ -481,16 +481,19 @@ export default {
 
         //////////BildUploud
 
-        if (url.pathname === "/api/upload" && request.method === "POST") {
+        if (url.pathname === "/api/upload") {
+            if (request.method !== "POST") {
+                return new Response("Method not allowed", { status: 405 });
+            }
+
             const formData = await request.formData();
             const file = formData.get("file");
 
-            if (!file) {
+            if (!file || typeof file === "string") {
                 return new Response("No file", { status: 400 });
             }
 
             const fileName = Date.now() + "-" + file.name;
-
             const arrayBuffer = await file.arrayBuffer();
 
             await env.IMAGES_BUCKET.put(fileName, arrayBuffer);
@@ -499,9 +502,11 @@ export default {
                 "INSERT INTO images (filename, status) VALUES (?, ?)"
             ).bind(fileName, "pending").run();
 
-            return Response.json({ success: true });
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
         }
-
+        
         return env.ASSETS.fetch(request);
     },
 };
