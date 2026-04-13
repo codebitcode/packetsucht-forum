@@ -1,6 +1,7 @@
 async function hashPassword(password) {
     const enc = new TextEncoder();
     const salt = crypto.getRandomValues(new Uint8Array(16));
+    const ADMIN_NAME = "champ";
 
     const keyMaterial = await crypto.subtle.importKey(
         "raw",
@@ -233,9 +234,12 @@ export default {
                 "SELECT id, username FROM users WHERE id = ?"
             ).bind(session.user_id).first();
 
+            const isAdmin = user.username === ADMIN_NAME;
+
             return new Response(JSON.stringify({
                 loggedIn: true,
-                user
+                user,
+                isAdmin
             }), {
                 headers: { "Content-Type": "application/json" }
             });
