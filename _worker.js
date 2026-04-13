@@ -158,6 +158,10 @@ export default {
                 return new Response("invalid login", { status: 401 });
             }
 
+            await env.DB.prepare(
+                "DELETE FROM sessions WHERE created_at < datetime('now', '-7 days')"
+            ).run();
+
             const sessionId = crypto.randomUUID();
 
             await env.DB.prepare(
@@ -173,7 +177,7 @@ export default {
             }), {
                 headers: {
                     "Content-Type": "application/json",
-                    "Set-Cookie": `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Lax`
+                    "Set-Cookie": `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
                 }
             });
         }
@@ -242,9 +246,9 @@ export default {
 
         if (url.pathname.startsWith("/api/threads")) {
             if (request.method === "GET") {
-           const { results } = await env.DB.prepare(
-              "SELECT * FROM threads WHERE id > 2 ORDER BY id DESC"
-            ).all();
+                const { results } = await env.DB.prepare(
+                    "SELECT * FROM threads WHERE id > 2 ORDER BY id DESC"
+                ).all();
                 return new Response(JSON.stringify(results), {
                     headers: { "Content-Type": "application/json" },
                 });
@@ -305,8 +309,8 @@ export default {
                     return new Response("thread_id fehlt", { status: 400 });
                 }
 
-               const { results } = await env.DB.prepare(
-                  `SELECT posts.*, users.username
+                const { results } = await env.DB.prepare(
+                    `SELECT posts.*, users.username
                    FROM posts
                    JOIN users ON posts.user_id = users.id
                    WHERE posts.thread_id = ?
@@ -316,7 +320,7 @@ export default {
                 return new Response(JSON.stringify(results), {
                     headers: { "Content-Type": "application/json" },
                 });
-            }  
+            }
 
             if (request.method === "POST") {
                 let body;
