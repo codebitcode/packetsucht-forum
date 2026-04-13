@@ -1,7 +1,7 @@
+const ADMIN_NAME = "champ";
 async function hashPassword(password) {
     const enc = new TextEncoder();
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    const ADMIN_NAME = "champ";
 
     const keyMaterial = await crypto.subtle.importKey(
         "raw",
@@ -60,6 +60,33 @@ async function verifyPassword(password, stored) {
 
     return newHashHex === hashHex;
 }
+
+
+//////////Admin
+
+
+async function getLoggedInUser(request, env) {
+    const cookie = request.headers.get("cookie") || "";
+    const match = cookie.match(/session_id=([^;]+)/);
+
+    if (!match) return null;
+
+    const session = await env.DB.prepare(
+        "SELECT user_id FROM sessions WHERE id = ?"
+    ).bind(match[1]).first();
+
+    if (!session) return null;
+
+    const user = await env.DB.prepare(
+        "SELECT id, username FROM users WHERE id = ?"
+    ).bind(session.user_id).first();
+
+    return user || null;
+}
+
+
+
+
 
 export default {
     async fetch(request, env) {
@@ -241,6 +268,87 @@ export default {
                 user,
                 isAdmin
             }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
+
+        /////////////Admin
+
+        if (url.pathname === "/api/images" && request.method === "GET") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            const status = url.searchParams.get("status") || "pending";
+
+            const { results } = await env.DB.prepare(
+                "SELECT * FROM images WHERE status = ? ORDER BY id DESC"
+            ).bind(status).all();
+
+            return new Response(JSON.stringify(results), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
+        if (url.pathname === "/api/images/approve" && request.method === "POST") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            let body;
+
+            try {
+                body = await request.json();
+            } catch {
+                return new Response("invalid json", { status: 400 });
+            }
+
+            const { id } = body || {};
+
+            if (!id) {
+                return new Response("missing id", { status: 400 });
+            }
+
+            await env.DB.prepare(
+                "UPDATE images SET status = 'approved' WHERE id = ?"
+            ).bind(id).run();
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
+        if (url.pathname === "/api/images/reject" && request.method === "POST") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            let body;
+
+            try {
+                body = await request.json();
+            } catch {
+                return new Response("invalid json", { status: 400 });
+            }
+
+            const { id } = body || {};
+
+            if (!id) {
+                return new Response("missing id", { status: 400 });
+            }
+
+            await env.DB.prepare(
+                "UPDATE images SET status = 'rejected' WHERE id = ?"
+            ).bind(id).run();
+
+            return new Response(JSON.stringify({ success: true }), {
                 headers: { "Content-Type": "application/json" }
             });
         }
