@@ -478,6 +478,28 @@ export default {
             return new Response("Method not allowed", { status: 405 });
         }
 
+
+        //////////BildUploud
+
+        if (url.pathname === "/api/upload" && request.method === "POST") {
+            const formData = await request.formData();
+            const file = formData.get("file");
+
+            if (!file) {
+                return new Response("No file", { status: 400 });
+            }
+
+            const fileName = Date.now() + "-" + file.name;
+
+            await env.IMAGES_BUCKET.put(fileName, file.stream());
+
+            await env.DB.prepare(
+                "INSERT INTO images (filename, status) VALUES (?, ?)"
+            ).bind(fileName, "pending").run();
+
+            return Response.json({ success: true });
+        }
+
         return env.ASSETS.fetch(request);
     },
 };
