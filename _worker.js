@@ -508,6 +508,7 @@ export default {
 
         const formData = await request.formData();
         const file = formData.get("file");
+        const threadId = formData.get("thread_id");
 
         if (!file || typeof file === "string") {
             return new Response("No file", { status: 400 });
@@ -522,9 +523,9 @@ export default {
             }
         });
 
-        await env.DB.prepare(
-            "INSERT INTO images (filename, status, user_id) VALUES (?, ?, ?)"
-        ).bind(fileName, "pending", user.id).run();
+       await env.DB.prepare(
+    "INSERT INTO images (filename, status, user_id, thread_id) VALUES (?, ?, ?, ?)"
+).bind(fileName, "pending", user.id, Number(threadId)).run();
 
         return new Response(JSON.stringify({
             success: true,
