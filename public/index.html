@@ -1,88 +1,118 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>Packetsucht Forum</title>
 </head>
+
 <body>
 
-<h1>📦 Packetsucht Forum</h1>
+  <h1>📦 Packetsucht Forum</h1>
 
-<div id="auth"></div>
+  <div id="auth"></div>
 
-<h2>Neuen Thread erstellen</h2>
+  <h2>Neuen Thread erstellen</h2>
 
-<input id="titleInput" type="text" placeholder="Titel eingeben">
-<button onclick="createThread()">Absenden</button>
+  <input id="titleInput" type="text" placeholder="Titel eingeben">
+  <button onclick="createThread()">Absenden</button>
 
-<h2>Threads</h2>
+  <h2>Threads</h2>
 
-<div id="threads"></div>
+  <div id="threads"></div>
 
-<script>
-async function loadThreads() {
-  const res = await fetch('/api/threads');
-  const data = await res.json();
+  <input type="file" id="fileInput">
+  <button onclick="upload()">Upload</button>
 
-  const container = document.getElementById('threads');
-  container.innerHTML = '';
+  <script>
 
-  data.forEach(t => {
-    const el = document.createElement('div');
-    el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
-    container.appendChild(el);
-  });
-}
+    async function upload() {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
 
-async function createThread() {
-  const title = document.getElementById('titleInput').value.trim();
+      if (!file) {
+        alert("keine Datei");
+        return;
+      }
 
-  if (!title) return;
+      const formData = new FormData();
+      formData.append("file", file);
 
-  const res = await fetch('/api/threads', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: title
-    })
-  });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData
+      });
 
-  if (!res.ok) {
-    alert(await res.text());
-    return;
-  }
+      const data = await res.json();
+      console.log(data);
 
-  document.getElementById('titleInput').value = '';
-  loadThreads();
-}
+      alert("hochgeladen");
+    }
 
-async function checkLogin() {
-  const res = await fetch('/api/me');
-  const data = await res.json();
+    async function loadThreads() {
+      const res = await fetch('/api/threads');
+      const data = await res.json();
 
-  const el = document.getElementById('auth');
+      const container = document.getElementById('threads');
+      container.innerHTML = '';
 
-  if (data.loggedIn) {
-    el.innerHTML = `
+      data.forEach(t => {
+        const el = document.createElement('div');
+        el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
+        container.appendChild(el);
+      });
+    }
+
+    async function createThread() {
+      const title = document.getElementById('titleInput').value.trim();
+
+      if (!title) return;
+
+      const res = await fetch('/api/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title
+        })
+      });
+
+      if (!res.ok) {
+        alert(await res.text());
+        return;
+      }
+
+      document.getElementById('titleInput').value = '';
+      loadThreads();
+    }
+
+    async function checkLogin() {
+      const res = await fetch('/api/me');
+      const data = await res.json();
+
+      const el = document.getElementById('auth');
+
+      if (data.loggedIn) {
+        el.innerHTML = `
       ${data.user.username} |
       <a href="#" onclick="logout(); return false;">Logout</a>
     `;
-  } else {
-    el.innerHTML = `
+      } else {
+        el.innerHTML = `
       <a href="/login.html">Login</a> |
       <a href="/register.html">Register</a>
     `;
-  }
-}
+      }
+    }
 
-async function logout() {
-  await fetch('/api/logout', { method: 'POST' });
-  location.reload();
-}
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      location.reload();
+    }
 
-loadThreads();
-checkLogin();
-</script>
+    loadThreads();
+    checkLogin();
+  </script>
 
 </body>
+
 </html>
