@@ -516,9 +516,15 @@ export default {
             }
         });
 
-        await env.DB.prepare(
-            "INSERT INTO images (filename, status) VALUES (?, ?)"
-        ).bind(fileName, "pending").run();
+       const user = await getLoggedInUser(request, env);
+
+if (!user) {
+  return new Response("not logged in", { status: 401 });
+}
+
+await env.DB.prepare(
+  "INSERT INTO images (filename, status, user_id) VALUES (?, ?, ?)"
+).bind(fileName, "pending", user.id).run();
 
         return new Response(JSON.stringify({
             success: true,
