@@ -494,49 +494,49 @@ export default {
 
         //////////BildUploud
 
-      if (url.pathname === "/api/upload") {
-    if (request.method !== "POST") {
-        return new Response("Method not allowed", { status: 405 });
-    }
-
-    try {
-        const user = await getLoggedInUser(request, env);
-
-        if (!user) {
-            return new Response("not logged in", { status: 401 });
-        }
-
-        const formData = await request.formData();
-        const file = formData.get("file");
-        const threadId = formData.get("thread_id");
-
-        if (!file || typeof file === "string") {
-            return new Response("No file", { status: 400 });
-        }
-
-        const fileName = Date.now() + "-" + file.name;
-        const arrayBuffer = await file.arrayBuffer();
-
-        await env.IMAGES_BUCKET.put(fileName, arrayBuffer, {
-            httpMetadata: {
-                contentType: file.type || "application/octet-stream"
+        if (url.pathname === "/api/upload") {
+            if (request.method !== "POST") {
+                return new Response("Method not allowed", { status: 405 });
             }
-        });
 
-       await env.DB.prepare(
-    "INSERT INTO images (filename, status, user_id, thread_id) VALUES (?, ?, ?, ?)"
-).bind(fileName, "pending", user.id, Number(threadId)).run();
+            try {
+                const user = await getLoggedInUser(request, env);
 
-        return new Response(JSON.stringify({
-            success: true,
-            filename: fileName
-        }), {
-            headers: { "Content-Type": "application/json" }
-        });
-    } catch (e) {
-        return new Response("UPLOAD ERROR: " + e.message, { status: 500 });
-    }
-}
+                if (!user) {
+                    return new Response("not logged in", { status: 401 });
+                }
+
+                const formData = await request.formData();
+                const file = formData.get("file");
+                const threadId = formData.get("thread_id");
+
+                if (!file || typeof file === "string") {
+                    return new Response("No file", { status: 400 });
+                }
+
+                const fileName = Date.now() + "-" + file.name;
+                const arrayBuffer = await file.arrayBuffer();
+                const imageUrl = "/api/image/" + encodeURIComponent(fileName);
+
+                await env.IMAGES_BUCKET.put(fileName, arrayBuffer, {
+                    httpMetadata: {
+                        contentType: file.type || "application/octet-stream"
+                    }
+                });
+
+                await env.DB.prepare(
+                    "INSERT INTO images (filename, status, user_id, thread_id, image_url) VALUES (?, ?, ?, ?, ?)"
+                ).bind(fileName, "pending", user.id, Number(threadId), imageUrl).run();
+                return new Response(JSON.stringify({
+                    success: true,
+                    filename: fileName
+                }), {
+                    headers: { "Content-Type": "application/json" }
+                });
+            } catch (e) {
+                return new Response("UPLOAD ERROR: " + e.message, { status: 500 });
+            }
+        }
 
         return env.ASSETS.fetch(request);
     },
