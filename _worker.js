@@ -494,31 +494,42 @@ export default {
 
         //////////BildUploud
 
-        if (url.pathname === "/api/upload") {
-            if (request.method !== "POST") {
-                return new Response("Method not allowed", { status: 405 });
-            }
+       if (url.pathname === "/api/upload") {
+    if (request.method !== "POST") {
+        return new Response("Method not allowed", { status: 405 });
+    }
 
-            const formData = await request.formData();
-            const file = formData.get("file");
+    try {
+        const formData = await request.formData();
+        const file = formData.get("file");
 
-            if (!file || typeof file === "string") {
-                return new Response("No file", { status: 400 });
-            }
-
-            const fileName = Date.now() + "-" + file.name;
-            const arrayBuffer = await file.arrayBuffer();
-
-            await env.IMAGES_BUCKET.put(fileName, arrayBuffer);
-
-            await env.DB.prepare(
-                "INSERT INTO images (filename, status) VALUES (?, ?)"
-            ).bind(fileName, "pending").run();
-
-            return new Response(JSON.stringify({ success: true, filename: fileName }), {
-                headers: { "Content-Type": "application/json" }
-            });
+        if (!file || typeof file === "string") {
+            return new Response("No file", { status: 400 });
         }
+
+        const fileName = Date.now() + "-" + file.name;
+        const arrayBuffer = await file.arrayBuffer();
+
+        await env.IMAGES_BUCKET.put(fileName, arrayBuffer, {
+            httpMetadata: {
+                contentType: file.type || "application/octet-stream"
+            }
+        });
+
+        await env.DB.prepare(
+            "INSERT INTO images (filename, status) VALUES (?, ?)"
+        ).bind(fileName, "pending").run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            filename: fileName
+        }), {
+            headers: { "Content-Type": "application/json" }
+        });
+    } catch (e) {
+        return new Response("UPLOAD ERROR: " + e.message, { status: 500 });
+    }
+}
 
         return env.ASSETS.fetch(request);
     },
