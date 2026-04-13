@@ -494,12 +494,18 @@ export default {
 
         //////////BildUploud
 
-       if (url.pathname === "/api/upload") {
+      if (url.pathname === "/api/upload") {
     if (request.method !== "POST") {
         return new Response("Method not allowed", { status: 405 });
     }
 
     try {
+        const user = await getLoggedInUser(request, env);
+
+        if (!user) {
+            return new Response("not logged in", { status: 401 });
+        }
+
         const formData = await request.formData();
         const file = formData.get("file");
 
@@ -516,15 +522,9 @@ export default {
             }
         });
 
-       const user = await getLoggedInUser(request, env);
-
-if (!user) {
-  return new Response("not logged in", { status: 401 });
-}
-
-await env.DB.prepare(
-  "INSERT INTO images (filename, status, user_id) VALUES (?, ?, ?)"
-).bind(fileName, "pending", user.id).run();
+        await env.DB.prepare(
+            "INSERT INTO images (filename, status, user_id) VALUES (?, ?, ?)"
+        ).bind(fileName, "pending", user.id).run();
 
         return new Response(JSON.stringify({
             success: true,
