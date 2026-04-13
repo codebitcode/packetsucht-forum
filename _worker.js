@@ -491,7 +491,9 @@ export default {
 
             const fileName = Date.now() + "-" + file.name;
 
-            await env.IMAGES_BUCKET.put(fileName, file.stream());
+            const arrayBuffer = await file.arrayBuffer();
+
+            await env.IMAGES_BUCKET.put(fileName, arrayBuffer);
 
             await env.DB.prepare(
                 "INSERT INTO images (filename, status) VALUES (?, ?)"
