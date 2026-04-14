@@ -67,12 +67,38 @@
         el.appendChild(text);
 
         if (p.image) {
-          const img = document.createElement('img');
-          img.src = '/api/image/' + encodeURIComponent(p.image);
-          img.style.maxWidth = '300px';
-          img.style.display = 'block';
-          img.style.marginTop = '8px';
-          el.appendChild(img);
+          if (p.status === "approved") {
+            const img = document.createElement('img');
+            img.src = '/api/image/' + encodeURIComponent(p.image);
+            img.style.maxWidth = '300px';
+            img.style.display = 'block';
+            img.style.marginTop = '8px';
+            el.appendChild(img);
+          } else if (p.status === "pending") {
+            const box = document.createElement('div');
+            box.textContent = 'PENDING';
+            box.style.width = '300px';
+            box.style.height = '180px';
+            box.style.marginTop = '8px';
+            box.style.display = 'flex';
+            box.style.alignItems = 'center';
+            box.style.justifyContent = 'center';
+            box.style.background = '#ccc';
+            box.style.fontWeight = 'bold';
+            el.appendChild(box);
+          } else if (p.status === "rejected") {
+            const box = document.createElement('div');
+            box.textContent = 'ABGELEHNT';
+            box.style.width = '300px';
+            box.style.height = '180px';
+            box.style.marginTop = '8px';
+            box.style.display = 'flex';
+            box.style.alignItems = 'center';
+            box.style.justifyContent = 'center';
+            box.style.background = '#f5b5b5';
+            box.style.fontWeight = 'bold';
+            el.appendChild(box);
+          }
         }
 
         container.appendChild(el);
