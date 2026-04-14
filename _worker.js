@@ -437,11 +437,12 @@ export default {
                 }
 
                 const { results } = await env.DB.prepare(
-                    `SELECT posts.*, users.username
-        FROM posts
-        LEFT JOIN users ON posts.user_id = users.id
-        WHERE posts.thread_id = ?
-        ORDER BY posts.id ASC`
+                    `SELECT posts.*, users.username, images.status
+FROM posts
+LEFT JOIN users ON posts.user_id = users.id
+LEFT JOIN images ON images.filename = posts.image
+WHERE posts.thread_id = ?
+ORDER BY posts.id ASC`
                 ).bind(threadId).all();
 
                 return new Response(JSON.stringify(results), {
