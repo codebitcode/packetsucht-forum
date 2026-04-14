@@ -94,19 +94,6 @@ export default {
 
         if (url.pathname.startsWith("/api/image/")) {
             const fileName = decodeURIComponent(url.pathname.replace("/api/image/", ""));
-
-            const imageRow = await env.DB.prepare(
-                "SELECT status FROM images WHERE filename = ?"
-            ).bind(fileName).first();
-
-            if (!imageRow) {
-                return new Response("Not found", { status: 404 });
-            }
-
-            if (imageRow.status !== "approved") {
-                return new Response("Not allowed", { status: 403 });
-            }
-
             const object = await env.IMAGES_BUCKET.get(fileName);
 
             if (!object) {
@@ -449,26 +436,13 @@ export default {
                     return new Response("thread_id fehlt", { status: 400 });
                 }
 
-             const { results } = await env.DB.prepare(
-    `SELECT 
-        posts.id,
-        posts.thread_id,
-        posts.user_id,
-        posts.content,
-        posts.created_at,
-        users.username,
-        CASE 
-            WHEN images.status = 'approved' THEN images.image_url
-            ELSE NULL
-        END AS image
-     FROM posts
-     LEFT JOIN users ON posts.user_id = users.id
-     LEFT JOIN images 
-       ON images.filename = posts.image
-       OR images.image_url = posts.image
-     WHERE posts.thread_id = ?
-     ORDER BY posts.id ASC`
-).bind(threadId).all();
+                const { results } = await env.DB.prepare(
+                    `SELECT posts.*, users.username
+                    FROM posts
+                    LEFT JOIN users ON posts.user_id = users.id
+                    WHERE posts.thread_id = ?
+                    ORDER BY posts.id ASC`
+                ).bind(threadId).all();
             }
 
             if (request.method === "POST") {
