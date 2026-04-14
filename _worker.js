@@ -449,27 +449,26 @@ export default {
                     return new Response("thread_id fehlt", { status: 400 });
                 }
 
-                const { results } = await env.DB.prepare(
-                    `SELECT 
-                    posts.id,
-                    posts.thread_id,
-                    posts.user_id,
-                    posts.content,
-                    posts.created_at,
-                    users.username,
-                    CASE 
-                    WHEN images.status = 'approved' THEN '/api/image/' || posts.image
-                    ELSE NULL
-                    END AS image
-                    FROM posts
-                    LEFT JOIN users ON posts.user_id = users.id
-                    LEFT JOIN images ON images.filename = posts.image
-                    WHERE posts.thread_id = ?
-                    ORDER BY posts.id ASC`
-                ).bind(threadId).all();
-                return new Response(JSON.stringify(results), {
-                    headers: { "Content-Type": "application/json" },
-                });
+             const { results } = await env.DB.prepare(
+    `SELECT 
+        posts.id,
+        posts.thread_id,
+        posts.user_id,
+        posts.content,
+        posts.created_at,
+        users.username,
+        CASE 
+            WHEN images.status = 'approved' THEN images.image_url
+            ELSE NULL
+        END AS image
+     FROM posts
+     LEFT JOIN users ON posts.user_id = users.id
+     LEFT JOIN images 
+       ON images.filename = posts.image
+       OR images.image_url = posts.image
+     WHERE posts.thread_id = ?
+     ORDER BY posts.id ASC`
+).bind(threadId).all();
             }
 
             if (request.method === "POST") {
