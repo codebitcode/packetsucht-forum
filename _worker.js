@@ -458,16 +458,15 @@ export default {
                     posts.created_at,
                     users.username,
                     CASE 
-                    WHEN images.status = 'approved' THEN posts.image
+                    WHEN images.status = 'approved' THEN '/api/image/' || posts.image
                     ELSE NULL
                     END AS image
                     FROM posts
                     LEFT JOIN users ON posts.user_id = users.id
-                    LEFT JOIN images ON images.image_url = posts.image
+                    LEFT JOIN images ON images.filename = posts.image
                     WHERE posts.thread_id = ?
                     ORDER BY posts.id ASC`
                 ).bind(threadId).all();
-
                 return new Response(JSON.stringify(results), {
                     headers: { "Content-Type": "application/json" },
                 });
