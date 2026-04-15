@@ -124,7 +124,13 @@
 
     (async () => {
       const ok = await checkAdmin();
-      if (ok) loadImages();
+      if (!ok) return;
+
+      await loadImages();
+
+      setInterval(async () => {
+        await loadImages();
+      }, 5000);
     })();
   </script>
 
