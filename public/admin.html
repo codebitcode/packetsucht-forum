@@ -129,9 +129,12 @@
       });
 
       await loadImages();
-      await loadThreads ();
+      await loadThreads();
     }
     async function deleteThread(id) {
+      const ok = confirm('Thread wirklich löschen?');
+      if (!ok) return;
+
       await fetch('/api/threads/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,6 +146,9 @@
     }
 
     async function reject(id) {
+      const ok = confirm('Bild wirklich ablehnen? Der Post wird gelöscht.');
+      if (!ok) return;
+
       await fetch('/api/images/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,6 +160,9 @@
     }
 
     async function deleteImage(id) {
+      const ok = confirm('Bild wirklich endgültig löschen?');
+      if (!ok) return;
+
       await fetch('/api/images/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,6 +170,7 @@
       });
 
       await loadImages();
+      await loadThreads();
     }
 
     (async () => {
