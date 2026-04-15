@@ -1,58 +1,59 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>Admin</title>
 </head>
+
 <body>
 
-<h1>🛠 Admin – Bilder prüfen</h1>
+  <h1>🛠 Admin – Bilder prüfen</h1>
 
-<div id="status"></div>
+  <div id="status"></div>
 
-<h2>Offen</h2>
-<div id="pendingImages"></div>
+  <h2>Offen</h2>
+  <div id="pendingImages"></div>
 
-<h2>Abgelehnt</h2>
-<div id="rejectedImages"></div>
+  <h2>Abgelehnt</h2>
+  <div id="rejectedImages"></div>
 
-<script>
-async function checkAdmin() {
-  const res = await fetch('/api/me');
-  const data = await res.json();
+  <script>
+    async function checkAdmin() {
+      const res = await fetch('/api/me');
+      const data = await res.json();
 
-  if (!data.loggedIn || !data.isAdmin) {
-    document.getElementById('status').innerText = 'Kein Zugriff';
-    return false;
-  }
+      if (!data.loggedIn || !data.isAdmin) {
+        document.getElementById('status').innerText = 'Kein Zugriff';
+        return false;
+      }
 
-  document.getElementById('status').innerText = 'Admin: ' + data.user.username;
-  return true;
-}
+      document.getElementById('status').innerText = 'Admin: ' + data.user.username;
+      return true;
+    }
 
-function renderImage(container, img, type) {
-  const el = document.createElement('div');
-  el.style.marginBottom = '30px';
-  el.style.padding = '10px';
-  el.style.border = '1px solid #ccc';
+    function renderImage(container, img, type) {
+      const el = document.createElement('div');
+      el.style.marginBottom = '30px';
+      el.style.padding = '10px';
+      el.style.border = '1px solid #ccc';
 
-  let buttons = '';
+      let buttons = '';
 
-  if (type === 'pending') {
-    buttons = `
+      if (type === 'pending') {
+        buttons = `
       <button onclick="approve(${img.id})">Freigeben</button>
       <button onclick="reject(${img.id})">Ablehnen</button>
     `;
-  }
+      }
 
-  if (type === 'rejected') {
-    buttons = `
-      <button onclick="approve(${img.id})">Doch freigeben</button>
-      
-    `;
-  }
+      if (type === 'rejected') {
+        buttons = `
+    <button onclick="deleteImage(${img.id})">Endgültig löschen</button>
+  `;
+      }
 
-  el.innerHTML = `
+      el.innerHTML = `
     <img src="${img.image_url}" width="200"><br><br>
     Bild-ID: ${img.id}<br>
     User: ${img.user_id}<br>
@@ -61,70 +62,71 @@ function renderImage(container, img, type) {
     ${buttons}
   `;
 
-  container.appendChild(el);
-}
+      container.appendChild(el);
+    }
 
-async function loadImages() {
-  const pendingRes = await fetch('/api/images?status=pending');
-  const pendingData = await pendingRes.json();
+    async function loadImages() {
+      const pendingRes = await fetch('/api/images?status=pending');
+      const pendingData = await pendingRes.json();
 
-  const rejectedRes = await fetch('/api/images?status=rejected');
-  const rejectedData = await rejectedRes.json();
+      const rejectedRes = await fetch('/api/images?status=rejected');
+      const rejectedData = await rejectedRes.json();
 
-  const pendingContainer = document.getElementById('pendingImages');
-  const rejectedContainer = document.getElementById('rejectedImages');
+      const pendingContainer = document.getElementById('pendingImages');
+      const rejectedContainer = document.getElementById('rejectedImages');
 
-  pendingContainer.innerHTML = '';
-  rejectedContainer.innerHTML = '';
+      pendingContainer.innerHTML = '';
+      rejectedContainer.innerHTML = '';
 
-  if (pendingData.length === 0) {
-    pendingContainer.innerHTML = '<p>Keine offenen Bilder.</p>';
-  } else {
-    pendingData.forEach(img => renderImage(pendingContainer, img, 'pending'));
-  }
+      if (pendingData.length === 0) {
+        pendingContainer.innerHTML = '<p>Keine offenen Bilder.</p>';
+      } else {
+        pendingData.forEach(img => renderImage(pendingContainer, img, 'pending'));
+      }
 
-  if (rejectedData.length === 0) {
-    rejectedContainer.innerHTML = '<p>Keine abgelehnten Bilder.</p>';
-  } else {
-    rejectedData.forEach(img => renderImage(rejectedContainer, img, 'rejected'));
-  }
-}
+      if (rejectedData.length === 0) {
+        rejectedContainer.innerHTML = '<p>Keine abgelehnten Bilder.</p>';
+      } else {
+        rejectedData.forEach(img => renderImage(rejectedContainer, img, 'rejected'));
+      }
+    }
 
-async function approve(id) {
-  await fetch('/api/images/approve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id })
-  });
+    async function approve(id) {
+      await fetch('/api/images/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
 
-  loadImages();
-}
+      loadImages();
+    }
 
-async function reject(id) {
-  await fetch('/api/images/reject', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id })
-  });
+    async function reject(id) {
+      await fetch('/api/images/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
 
-  loadImages();
-}
+      loadImages();
+    }
 
-async function deleteImage(id) {
-  await fetch('/api/images/delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id })
-  });
+    async function deleteImage(id) {
+      await fetch('/api/images/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
 
-  loadImages();
-}
+      loadImages();
+    }
 
-(async () => {
-  const ok = await checkAdmin();
-  if (ok) loadImages();
-})();
-</script>
+    (async () => {
+      const ok = await checkAdmin();
+      if (ok) loadImages();
+    })();
+  </script>
 
 </body>
+
 </html>
