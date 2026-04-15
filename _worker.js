@@ -365,200 +365,221 @@ export default {
                 return new Response("image not found", { status: 404 });
             }
 
-            // 🔥 Thread löschen
-            if (image.thread_id) {
-                await env.DB.prepare(
-                    "DELETE FROM posts WHERE thread_id = ?"
-                ).bind(image.thread_id).run();
+            if (url.pathname === "/api/images/reject" && request.method === "POST") {
+                const user = await getLoggedInUser(request, env);
 
-                await env.DB.prepare(
-                    "DELETE FROM threads WHERE id = ?"
-                ).bind(image.thread_id).run();
-            }
+                if (!user || user.username !== ADMIN_NAME) {
+                    return new Response("forbidden", { status: 403 });
+                }
 
-            // Status setzen
-            await env.DB.prepare(
-                "UPDATE images SET status = 'rejected', thread_id = NULL WHERE id = ?"
-            ).bind(id).run();
-
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-
-        ////////////threads/////////////////////
-
-
-        if (url.pathname.startsWith("/api/threads")) {
-            if (request.method === "GET") {
-                const { results } = await env.DB.prepare(
-                    "SELECT * FROM threads WHERE id > 2 ORDER BY id DESC"
-                ).all();
-                return new Response(JSON.stringify(results), {
-                    headers: { "Content-Type": "application/json" },
-                });
-            }
-
-            if (request.method === "POST") {
                 let body;
-
                 try {
                     body = await request.json();
-                } catch (e) {
+                } catch {
                     return new Response("invalid json", { status: 400 });
                 }
 
-                const { title } = body || {};
-
-                const cookie = request.headers.get("cookie") || "";
-                const match = cookie.match(/session_id=([^;]+)/);
-
-                if (!match) {
-                    return new Response("not logged in", { status: 401 });
+                const { id } = body || {};
+                if (!id) {
+                    return new Response("missing id", { status: 400 });
                 }
 
-                const session = await env.DB.prepare(
-                    "SELECT user_id FROM sessions WHERE id = ?"
-                ).bind(match[1]).first();
+                const image = await env.DB.prepare(
+                    "SELECT * FROM images WHERE id = ?"
+                ).bind(id).first();
 
-                if (!session) {
-                    return new Response("invalid session", { status: 401 });
+                if (!image) {
+                    return new Response("image not found", { status: 404 });
                 }
 
-                if (!title) {
-                    return new Response("missing data", { status: 400 });
-                }
-
+                // nur den Post löschen, der dieses Bild benutzt
                 await env.DB.prepare(
-                    "INSERT INTO threads (title, user_id) VALUES (?, ?)"
-                )
-                    .bind(title, session.user_id)
-                    .run();
+                    "DELETE FROM posts WHERE image = ?"
+                ).bind(image.filename).run();
+
+                // Bild bleibt im Admin, nur Status ändern
+                await env.DB.prepare(
+                    "UPDATE images SET status = 'rejected' WHERE id = ?"
+                ).bind(id).run();
 
                 return new Response(JSON.stringify({ success: true }), {
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json" }
                 });
             }
 
-            return new Response("Method not allowed", { status: 405 });
-        }
+            ////////////threads/////////////////////
 
 
-        /////////////////Post
-
-        if (url.pathname.startsWith("/api/posts")) {
-            if (request.method === "GET") {
-                const threadId = Number(url.searchParams.get("thread_id"));
-
-                if (!threadId) {
-                    return new Response("thread_id fehlt", { status: 400 });
+            if (url.pathname.startsWith("/api/threads")) {
+                if (request.method === "GET") {
+                    const { results } = await env.DB.prepare(
+                        "SELECT * FROM threads WHERE id > 2 ORDER BY id DESC"
+                    ).all();
+                    return new Response(JSON.stringify(results), {
+                        headers: { "Content-Type": "application/json" },
+                    });
                 }
 
-                const { results } = await env.DB.prepare(
-                    `SELECT posts.*, users.username, images.status
+                if (request.method === "POST") {
+                    let body;
+
+                    try {
+                        body = await request.json();
+                    } catch (e) {
+                        return new Response("invalid json", { status: 400 });
+                    }
+
+                    const { title } = body || {};
+
+                    const cookie = request.headers.get("cookie") || "";
+                    const match = cookie.match(/session_id=([^;]+)/);
+
+                    if (!match) {
+                        return new Response("not logged in", { status: 401 });
+                    }
+
+                    const session = await env.DB.prepare(
+                        "SELECT user_id FROM sessions WHERE id = ?"
+                    ).bind(match[1]).first();
+
+                    if (!session) {
+                        return new Response("invalid session", { status: 401 });
+                    }
+
+                    if (!title) {
+                        return new Response("missing data", { status: 400 });
+                    }
+
+                    await env.DB.prepare(
+                        "INSERT INTO threads (title, user_id) VALUES (?, ?)"
+                    )
+                        .bind(title, session.user_id)
+                        .run();
+
+                    return new Response(JSON.stringify({ success: true }), {
+                        headers: { "Content-Type": "application/json" },
+                    });
+                }
+
+                return new Response("Method not allowed", { status: 405 });
+            }
+
+
+            /////////////////Post
+
+            if (url.pathname.startsWith("/api/posts")) {
+                if (request.method === "GET") {
+                    const threadId = Number(url.searchParams.get("thread_id"));
+
+                    if (!threadId) {
+                        return new Response("thread_id fehlt", { status: 400 });
+                    }
+
+                    const { results } = await env.DB.prepare(
+                        `SELECT posts.*, users.username, images.status
 FROM posts
 LEFT JOIN users ON posts.user_id = users.id
 LEFT JOIN images ON images.filename = posts.image
 WHERE posts.thread_id = ?
 ORDER BY posts.id ASC`
-                ).bind(threadId).all();
+                    ).bind(threadId).all();
 
-                return new Response(JSON.stringify(results), {
-                    headers: { "Content-Type": "application/json" },
-                });
-            }
-
-            if (request.method === "POST") {
-                let body;
-
-                try {
-                    body = await request.json();
-                } catch (e) {
-                    return new Response("invalid json", { status: 400 });
+                    return new Response(JSON.stringify(results), {
+                        headers: { "Content-Type": "application/json" },
+                    });
                 }
 
-                const { thread_id, content, image } = body || {};
-                const cookie = request.headers.get("cookie") || "";
-                const match = cookie.match(/session_id=([^;]+)/);
+                if (request.method === "POST") {
+                    let body;
 
-                if (!match) {
-                    return new Response("not logged in", { status: 401 });
+                    try {
+                        body = await request.json();
+                    } catch (e) {
+                        return new Response("invalid json", { status: 400 });
+                    }
+
+                    const { thread_id, content, image } = body || {};
+                    const cookie = request.headers.get("cookie") || "";
+                    const match = cookie.match(/session_id=([^;]+)/);
+
+                    if (!match) {
+                        return new Response("not logged in", { status: 401 });
+                    }
+
+                    const session = await env.DB.prepare(
+                        "SELECT user_id FROM sessions WHERE id = ?"
+                    ).bind(match[1]).first();
+
+                    if (!session) {
+                        return new Response("invalid session", { status: 401 });
+                    }
+
+
+                    if (!thread_id || (!content && !image)) {
+                        return new Response("missing data", { status: 400 });
+                    }
+
+                    await env.DB.prepare(
+                        "INSERT INTO posts (thread_id, user_id, content, image) VALUES (?, ?, ?, ?)"
+                    )
+                        .bind(Number(thread_id), session.user_id, content, image || null)
+                        .run();
+
+                    return new Response(JSON.stringify({ success: true }), {
+                        headers: { "Content-Type": "application/json" },
+                    });
                 }
 
-                const session = await env.DB.prepare(
-                    "SELECT user_id FROM sessions WHERE id = ?"
-                ).bind(match[1]).first();
-
-                if (!session) {
-                    return new Response("invalid session", { status: 401 });
-                }
-
-
-                if (!thread_id || (!content && !image)) {
-                    return new Response("missing data", { status: 400 });
-                }
-
-                await env.DB.prepare(
-                    "INSERT INTO posts (thread_id, user_id, content, image) VALUES (?, ?, ?, ?)"
-                )
-                    .bind(Number(thread_id), session.user_id, content, image || null)
-                    .run();
-
-                return new Response(JSON.stringify({ success: true }), {
-                    headers: { "Content-Type": "application/json" },
-                });
-            }
-
-            return new Response("Method not allowed", { status: 405 });
-        }
-
-
-        //////////BildUploud
-
-        if (url.pathname === "/api/upload") {
-            if (request.method !== "POST") {
                 return new Response("Method not allowed", { status: 405 });
             }
 
-            try {
-                const user = await getLoggedInUser(request, env);
 
-                if (!user) {
-                    return new Response("not logged in", { status: 401 });
+            //////////BildUploud
+
+            if (url.pathname === "/api/upload") {
+                if (request.method !== "POST") {
+                    return new Response("Method not allowed", { status: 405 });
                 }
 
-                const formData = await request.formData();
-                const file = formData.get("file");
-                const threadId = formData.get("thread_id");
+                try {
+                    const user = await getLoggedInUser(request, env);
 
-                if (!file || typeof file === "string") {
-                    return new Response("No file", { status: 400 });
-                }
-
-                const fileName = Date.now() + "-" + file.name;
-                const arrayBuffer = await file.arrayBuffer();
-                const imageUrl = "/api/image/" + encodeURIComponent(fileName);
-
-                await env.IMAGES_BUCKET.put(fileName, arrayBuffer, {
-                    httpMetadata: {
-                        contentType: file.type || "application/octet-stream"
+                    if (!user) {
+                        return new Response("not logged in", { status: 401 });
                     }
-                });
 
-                await env.DB.prepare(
-                    "INSERT INTO images (filename, status, user_id, thread_id, image_url) VALUES (?, ?, ?, ?, ?)"
-                ).bind(fileName, "pending", user.id, Number(threadId), imageUrl).run();
-                return new Response(JSON.stringify({
-                    success: true,
-                    filename: fileName
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
-            } catch (e) {
-                return new Response("UPLOAD ERROR: " + e.message, { status: 500 });
+                    const formData = await request.formData();
+                    const file = formData.get("file");
+                    const threadId = formData.get("thread_id");
+
+                    if (!file || typeof file === "string") {
+                        return new Response("No file", { status: 400 });
+                    }
+
+                    const fileName = Date.now() + "-" + file.name;
+                    const arrayBuffer = await file.arrayBuffer();
+                    const imageUrl = "/api/image/" + encodeURIComponent(fileName);
+
+                    await env.IMAGES_BUCKET.put(fileName, arrayBuffer, {
+                        httpMetadata: {
+                            contentType: file.type || "application/octet-stream"
+                        }
+                    });
+
+                    await env.DB.prepare(
+                        "INSERT INTO images (filename, status, user_id, thread_id, image_url) VALUES (?, ?, ?, ?, ?)"
+                    ).bind(fileName, "pending", user.id, Number(threadId), imageUrl).run();
+                    return new Response(JSON.stringify({
+                        success: true,
+                        filename: fileName
+                    }), {
+                        headers: { "Content-Type": "application/json" }
+                    });
+                } catch (e) {
+                    return new Response("UPLOAD ERROR: " + e.message, { status: 500 });
+                }
             }
-        }
 
-        return env.ASSETS.fetch(request);
-    },
-};
+            return env.ASSETS.fetch(request);
+        },
+    };
