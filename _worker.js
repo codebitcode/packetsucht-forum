@@ -346,7 +346,6 @@ export default {
             }
 
             let body;
-
             try {
                 body = await request.json();
             } catch {
@@ -354,13 +353,32 @@ export default {
             }
 
             const { id } = body || {};
-
             if (!id) {
                 return new Response("missing id", { status: 400 });
             }
 
+            const image = await env.DB.prepare(
+                "SELECT * FROM images WHERE id = ?"
+            ).bind(id).first();
+
+            if (!image) {
+                return new Response("image not found", { status: 404 });
+            }
+
+            // 🔥 Thread löschen
+            if (image.thread_id) {
+                await env.DB.prepare(
+                    "DELETE FROM posts WHERE thread_id = ?"
+                ).bind(image.thread_id).run();
+
+                await env.DB.prepare(
+                    "DELETE FROM threads WHERE id = ?"
+                ).bind(image.thread_id).run();
+            }
+
+            // Status setzen
             await env.DB.prepare(
-                "UPDATE images SET status = 'rejected' WHERE id = ?"
+                "UPDATE images SET status = 'rejected', thread_id = NULL WHERE id = ?"
             ).bind(id).run();
 
             return new Response(JSON.stringify({ success: true }), {
