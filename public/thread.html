@@ -26,6 +26,7 @@
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const threadId = urlParams.get('id');
+    let isPosting = false;
 
     async function loadThread() {
       const res = await fetch('/api/threads');
@@ -105,62 +106,75 @@
       });
     }
 
+
+
     document.getElementById('postForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const content = document.getElementById('content').value.trim();
-      const fileInput = document.getElementById('fileInput');
-      const file = fileInput.files[0];
+      if (isPosting) return;
+      isPosting = true;
 
-      if (!content && !file) return;
+      const submitBtn = document.querySelector('#postForm button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
 
-      document.getElementById('error').innerText = '';
+      try {
+        const content = document.getElementById('content').value.trim();
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
 
-      let uploadedFile = null;
+        if (!content && !file) return;
 
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('thread_id', threadId);
+        document.getElementById('error').innerText = '';
 
-        const uploadRes = await fetch('/api/upload', {
+        let uploadedFile = null;
+
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('thread_id', threadId);
+
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const uploadText = await uploadRes.text();
+          console.log('POST /api/upload:', uploadRes.status, uploadText);
+
+          if (!uploadRes.ok) {
+            document.getElementById('error').innerText = uploadText;
+            return;
+          }
+
+          const uploadData = JSON.parse(uploadText);
+          uploadedFile = uploadData.filename;
+        }
+
+        const res = await fetch('/api/posts', {
           method: 'POST',
-          body: formData
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            thread_id: Number(threadId),
+            content: content,
+            image: uploadedFile
+          })
         });
 
-        const uploadText = await uploadRes.text();
-        console.log('POST /api/upload:', uploadRes.status, uploadText);
+        const text = await res.text();
+        console.log('POST /api/posts:', res.status, text);
 
-        if (!uploadRes.ok) {
-          document.getElementById('error').innerText = uploadText;
+        if (!res.ok) {
+          document.getElementById('error').innerText = text;
           return;
         }
 
-        const uploadData = JSON.parse(uploadText);
-        uploadedFile = uploadData.filename;
+        document.getElementById('content').value = '';
+        fileInput.value = '';
+        await loadPosts();
+      } finally {
+        isPosting = false;
+        if (submitBtn) submitBtn.disabled = false;
       }
-
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thread_id: Number(threadId),
-          content: content,
-          image: uploadedFile
-        })
-      });
-
-      const text = await res.text();
-      console.log('POST /api/posts:', res.status, text);
-
-      if (!res.ok) {
-        document.getElementById('error').innerText = text;
-        return;
-      }
-
-      document.getElementById('content').value = '';
-      fileInput.value = '';
-      await loadPosts();
     });
 
     (async () => {
