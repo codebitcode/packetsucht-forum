@@ -418,6 +418,62 @@ export default {
             });
         }
 
+        /////////////Threads/Delite
+
+        if (url.pathname === "/api/threads/delete" && request.method === "POST") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            let body;
+            try {
+                body = await request.json();
+            } catch {
+                return new Response("invalid json", { status: 400 });
+            }
+
+            const { id } = body || {};
+            if (!id) {
+                return new Response("missing id", { status: 400 });
+            }
+
+            const thread = await env.DB.prepare(
+                "SELECT * FROM threads WHERE id = ?"
+            ).bind(id).first();
+
+            if (!thread) {
+                return new Response("thread not found", { status: 404 });
+            }
+
+            const { results: images } = await env.DB.prepare(
+                "SELECT * FROM images WHERE thread_id = ?"
+            ).bind(id).all();
+
+            for (const image of images) {
+                if (image.filename) {
+                    await env.IMAGES_BUCKET.delete(image.filename);
+                }
+            }
+
+            await env.DB.prepare(
+                "DELETE FROM images WHERE thread_id = ?"
+            ).bind(id).run();
+
+            await env.DB.prepare(
+                "DELETE FROM posts WHERE thread_id = ?"
+            ).bind(id).run();
+
+            await env.DB.prepare(
+                "DELETE FROM threads WHERE id = ?"
+            ).bind(id).run();
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         ////////////threads/////////////////////
 
 
