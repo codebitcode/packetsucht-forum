@@ -54,13 +54,14 @@
       }
 
       el.innerHTML = `
-    <img src="${img.image_url}" width="200"><br><br>
-    Bild-ID: ${img.id}<br>
-    User: ${img.user_id}<br>
-    Thread: ${img.thread_id ?? '-'}<br>
-    Status: ${img.status}<br><br>
-    ${buttons}
-  `;
+  <img src="${img.image_url}" width="200"><br><br>
+  Bild-ID: ${img.id}<br>
+  Filename: ${img.filename}<br>
+  User: ${img.user_id}<br>
+  Thread: ${img.thread_id ?? '-'}<br>
+  Status: ${img.status}<br><br>
+  ${buttons}
+`;
 
       container.appendChild(el);
     }
