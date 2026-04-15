@@ -163,9 +163,15 @@
       await loadPosts();
     });
 
-    loadThread();
-    loadPosts();
-    checkLogin();
+    (async () => {
+      await loadThread();
+      await loadPosts();
+      await checkLogin();
+
+      setInterval(async () => {
+        await loadPosts();
+      }, 5000);
+    })();
   </script>
 
 </body>
