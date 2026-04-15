@@ -111,9 +111,10 @@
         el.style.padding = '10px';
 
         el.innerHTML = `
-      <b>${t.title}</b><br>
-      Thread-ID: ${t.id}
-    `;
+  <b>${t.title}</b><br>
+  Thread-ID: ${t.id}<br><br>
+  <button onclick="deleteThread(${t.id})">Thread löschen</button>
+`;
 
         container.appendChild(el);
       });
@@ -127,7 +128,18 @@
         body: JSON.stringify({ id })
       });
 
-      loadImages();
+      await loadImages();
+      await loadThreads ();
+    }
+    async function deleteThread(id) {
+      await fetch('/api/threads/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      await loadThreads();
+      await loadImages();
     }
 
     async function reject(id) {
@@ -137,7 +149,8 @@
         body: JSON.stringify({ id })
       });
 
-      loadImages();
+      await loadImages();
+      await loadThreads();
     }
 
     async function deleteImage(id) {
@@ -147,7 +160,7 @@
         body: JSON.stringify({ id })
       });
 
-      loadImages();
+      await loadImages();
     }
 
     (async () => {
