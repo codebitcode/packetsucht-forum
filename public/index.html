@@ -21,7 +21,7 @@
 
   <div id="threads"></div>
 
-  
+
 
   <script>
 
@@ -85,8 +85,14 @@
       location.reload();
     }
 
-    loadThreads();
-    checkLogin();
+    (async () => {
+      await loadThreads();
+      await checkLogin();
+
+      setInterval(async () => {
+        await loadThreads();
+      }, 5000);
+    })();
   </script>
 
 </body>
