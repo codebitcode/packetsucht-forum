@@ -378,6 +378,46 @@ export default {
             });
         }
 
+        if (url.pathname === "/api/images/delete" && request.method === "POST") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            let body;
+            try {
+                body = await request.json();
+            } catch {
+                return new Response("invalid json", { status: 400 });
+            }
+
+            const { id } = body || {};
+            if (!id) {
+                return new Response("missing id", { status: 400 });
+            }
+
+            const image = await env.DB.prepare(
+                "SELECT * FROM images WHERE id = ?"
+            ).bind(id).first();
+
+            if (!image) {
+                return new Response("image not found", { status: 404 });
+            }
+
+            if (image.filename) {
+                await env.IMAGES_BUCKET.delete(image.filename);
+            }
+
+            await env.DB.prepare(
+                "DELETE FROM images WHERE id = ?"
+            ).bind(id).run();
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         ////////////threads/////////////////////
 
 
