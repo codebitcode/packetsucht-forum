@@ -9,7 +9,12 @@
 <h1>🛠 Admin – Bilder prüfen</h1>
 
 <div id="status"></div>
-<div id="images"></div>
+
+<h2>Offen</h2>
+<div id="pendingImages"></div>
+
+<h2>Abgelehnt</h2>
+<div id="rejectedImages"></div>
 
 <script>
 async function checkAdmin() {
@@ -25,26 +30,64 @@ async function checkAdmin() {
   return true;
 }
 
-async function loadImages() {
-  const res = await fetch('/api/images?status=pending');
-  const data = await res.json();
+function renderImage(container, img, type) {
+  const el = document.createElement('div');
+  el.style.marginBottom = '30px';
+  el.style.padding = '10px';
+  el.style.border = '1px solid #ccc';
 
-  const container = document.getElementById('images');
-  container.innerHTML = '';
+  let buttons = '';
 
-  data.forEach(img => {
-    const el = document.createElement('div');
-    el.style.marginBottom = '20px';
-
-    el.innerHTML = `
-      <img src="${img.image_url}" width="200"><br>
-      User: ${img.user_id}<br><br>
+  if (type === 'pending') {
+    buttons = `
       <button onclick="approve(${img.id})">Freigeben</button>
       <button onclick="reject(${img.id})">Ablehnen</button>
     `;
+  }
 
-    container.appendChild(el);
-  });
+  if (type === 'rejected') {
+    buttons = `
+      <button onclick="approve(${img.id})">Doch freigeben</button>
+      <button onclick="deleteImage(${img.id})">Endgültig löschen</button>
+    `;
+  }
+
+  el.innerHTML = `
+    <img src="${img.image_url}" width="200"><br><br>
+    Bild-ID: ${img.id}<br>
+    User: ${img.user_id}<br>
+    Thread: ${img.thread_id ?? '-'}<br>
+    Status: ${img.status}<br><br>
+    ${buttons}
+  `;
+
+  container.appendChild(el);
+}
+
+async function loadImages() {
+  const pendingRes = await fetch('/api/images?status=pending');
+  const pendingData = await pendingRes.json();
+
+  const rejectedRes = await fetch('/api/images?status=rejected');
+  const rejectedData = await rejectedRes.json();
+
+  const pendingContainer = document.getElementById('pendingImages');
+  const rejectedContainer = document.getElementById('rejectedImages');
+
+  pendingContainer.innerHTML = '';
+  rejectedContainer.innerHTML = '';
+
+  if (pendingData.length === 0) {
+    pendingContainer.innerHTML = '<p>Keine offenen Bilder.</p>';
+  } else {
+    pendingData.forEach(img => renderImage(pendingContainer, img, 'pending'));
+  }
+
+  if (rejectedData.length === 0) {
+    rejectedContainer.innerHTML = '<p>Keine abgelehnten Bilder.</p>';
+  } else {
+    rejectedData.forEach(img => renderImage(rejectedContainer, img, 'rejected'));
+  }
 }
 
 async function approve(id) {
@@ -53,6 +96,7 @@ async function approve(id) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
   });
+
   loadImages();
 }
 
@@ -62,6 +106,17 @@ async function reject(id) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
   });
+
+  loadImages();
+}
+
+async function deleteImage(id) {
+  await fetch('/api/images/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+
   loadImages();
 }
 
