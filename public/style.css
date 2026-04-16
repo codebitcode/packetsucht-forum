@@ -1,55 +1,97 @@
+/* GLOBAL BASE */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 15px;
+    font-family: Arial, sans-serif;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+input,
+textarea,
+button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+}
+
+button {
+    cursor: pointer;
+}
+
+
+
+
 /* INDEX CSS
 - Layout (body, max-width, margin)
 - Threads (Abstand, Hover, Klickfläche)
 */
 
-body {
-  font-family: Arial, sans-serif;
-  max-width: 600px;
-  margin: 40px auto;
-}
+
 
 h1 {
-  margin-bottom: 10px;
+    margin-bottom: 10px;
 }
 
 #auth {
-  margin-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 #threads {
-  margin-top: 10px;
+    margin-top: 10px;
 }
 
 .thread {
-  padding: 8px;
-  border-bottom: 1px solid #ddd;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
 }
 
 .thread a {
     display: block;
-  text-decoration: none;
-  color: #333;
-  font-weight: bold;
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
 }
 
 .thread:hover {
-  background: #f5f5f5;
+    background: #f5f5f5;
 }
 
 .thread a:hover {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 #titleInput {
-  padding: 6px;
-  width: 70%;
-  margin-right: 5px;
+    width: 100%;
+    display: block;
 }
 
-button {
-  padding: 6px 10px;
-  cursor: pointer;
+#titleInput+button {
+    width: 100%;
+    display: block;
+}
+
+@media (min-width: 700px) {
+    #titleInput {
+        width: calc(70% - 5px);
+        display: inline-block;
+    }
+
+    #titleInput+button {
+        width: 30%;
+        display: inline-block;
+    }
 }
 
 
@@ -61,25 +103,26 @@ button {
 */
 
 .box {
-  width: 300px;
-  height: 180px;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
+    width: 100%;
+    max-width: 300px;
+    height: 180px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
 }
 
 .pending {
-  background: #ccc;
+    background: #ccc;
 }
 
 .rejected {
-  background: #f5b5b5;
+    background: #f5b5b5;
 }
 
 .post-image {
-  max-width: 300px;
-  display: block;
-  margin-top: 8px;
+    max-width: 300px;
+    display: block;
+    margin-top: 8px;
 }
