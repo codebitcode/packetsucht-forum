@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Packetsucht Forum</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
@@ -34,6 +35,7 @@
 
       data.forEach(t => {
         const el = document.createElement('div');
+        el.className = 'thread';
         el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
         container.appendChild(el);
       });
