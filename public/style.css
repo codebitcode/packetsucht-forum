@@ -1,0 +1,23 @@
+.box {
+  width: 300px;
+  height: 180px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.pending {
+  background: #ccc;
+}
+
+.rejected {
+  background: #f5b5b5;
+}
+
+.post-image {
+  max-width: 300px;
+  display: block;
+  margin-top: 8px;
+}
