@@ -92,6 +92,26 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
+        if (
+            request.method === "GET" &&
+            !url.pathname.startsWith("/api") &&
+            !url.pathname.startsWith("/Bilder/") &&
+            !url.pathname.includes(".")
+        ) {
+            const rawIp = request.headers.get("CF-Connecting-IP") || "";
+            const ip = await sha256(rawIp);
+            const country = request.cf?.country || "??";
+            const path = url.pathname + url.search;
+
+            const user = await getLoggedInUser(request, env);
+            const userId = user ? user.id : null;
+
+            await env.DB.prepare(`
+                INSERT INTO stats (ip, country, path, user_id, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            `).bind(ip, country, path, userId, Date.now()).run();
+        }
+
         if (url.pathname.startsWith("/api/image/")) {
             const fileName = decodeURIComponent(url.pathname.replace("/api/image/", ""));
             const object = await env.IMAGES_BUCKET.get(fileName);
@@ -705,3 +725,8 @@ ORDER BY posts.id ASC`
         return env.ASSETS.fetch(request);
     },
 };
+async function sha256(text) {
+    const enc = new TextEncoder().encode(text);
+    const hash = await crypto.subtle.digest("SHA-256", enc);
+    return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
