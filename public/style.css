@@ -1,34 +1,47 @@
 
-.thread {
+body {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 40px auto;
+}
+
+h1 {
   margin-bottom: 10px;
+}
+
+#auth {
+  margin-bottom: 20px;
+}
+
+#threads {
+  margin-top: 10px;
+}
+
+.thread {
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
 }
 
 .thread a {
   text-decoration: none;
-  font-weight: bold;
   color: #333;
+  font-weight: bold;
 }
 
 .thread a:hover {
   text-decoration: underline;
 }
 
-#auth {
-  margin-bottom: 10px;
-}
-
 #titleInput {
-  padding: 5px;
-  width: 200px;
+  padding: 6px;
+  width: 70%;
+  margin-right: 5px;
 }
 
 button {
-  padding: 5px 10px;
+  padding: 6px 10px;
   cursor: pointer;
 }
-
-
-
 
 
 
