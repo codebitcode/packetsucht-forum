@@ -532,6 +532,61 @@ export default {
         }
 
 
+        /////////////////PostDe;ite
+
+
+        if (url.pathname === "/api/posts/delete" && request.method === "POST") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            let body;
+            try {
+                body = await request.json();
+            } catch {
+                return new Response("invalid json", { status: 400 });
+            }
+
+            const { id } = body || {};
+            if (!id) {
+                return new Response("missing id", { status: 400 });
+            }
+
+            const post = await env.DB.prepare(
+                "SELECT * FROM posts WHERE id = ?"
+            ).bind(id).first();
+
+            if (!post) {
+                return new Response("post not found", { status: 404 });
+            }
+
+            if (post.image) {
+                const image = await env.DB.prepare(
+                    "SELECT * FROM images WHERE filename = ?"
+                ).bind(post.image).first();
+
+                if (image) {
+                    if (image.filename) {
+                        await env.IMAGES_BUCKET.delete(image.filename);
+                    }
+
+                    await env.DB.prepare(
+                        "DELETE FROM images WHERE id = ?"
+                    ).bind(image.id).run();
+                }
+            }
+
+            await env.DB.prepare(
+                "DELETE FROM posts WHERE id = ?"
+            ).bind(id).run();
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         /////////////////Post
 
         if (url.pathname.startsWith("/api/posts")) {
