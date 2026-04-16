@@ -109,8 +109,7 @@ export default {
             if (
                 request.method === "GET" &&
                 !url.pathname.startsWith("/api") &&
-                !url.pathname.startsWith("/Bilder/") &&
-                !url.pathname.includes(".")
+                !url.pathname.startsWith("/Bilder/") 
             ) {
                const ip = request.headers.get("CF-Connecting-IP") || "";
                 const country = request.cf?.country || "??";
