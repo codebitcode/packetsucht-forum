@@ -9,7 +9,7 @@
 <body>
   <div id="status"></div>
   <h1>🛠 Admin – Bilder prüfen</h1>
-  
+
   <h2>Offen</h2>
   <div id="pendingImages"></div>
 
@@ -25,9 +25,11 @@
 
 
   <script>
+    let openThreadId = null;
     async function checkAdmin() {
       const res = await fetch('/api/me');
       const data = await res.json();
+
 
       if (!data.loggedIn || !data.isAdmin) {
         document.getElementById('status').innerText = 'Kein Zugriff';
@@ -98,6 +100,10 @@
       }
     }
 
+
+
+
+
     async function loadThreads() {
       const res = await fetch('/api/threads');
       const data = await res.json();
@@ -105,22 +111,90 @@
       const container = document.getElementById('threads');
       container.innerHTML = '';
 
-      data.forEach(t => {
+      for (const t of data) {
         const el = document.createElement('div');
         el.style.border = '1px solid #ccc';
         el.style.marginBottom = '10px';
         el.style.padding = '10px';
 
+        let postsHtml = '';
+
+        if (openThreadId === t.id) {
+          const postsRes = await fetch('/api/posts?thread_id=' + Number(t.id));
+          const posts = await postsRes.json();
+
+          if (!posts.length) {
+            postsHtml = `<div style="margin-top:10px;">Keine Posts vorhanden.</div>`;
+          } else {
+            postsHtml = `<div style="margin-top:10px;">`;
+
+            posts.forEach(p => {
+              let imageHtml = '';
+
+              if (p.image) {
+                if (p.status === 'approved') {
+                  imageHtml = `<img src="/api/image/${encodeURIComponent(p.image)}" width="200"><br><br>`;
+                } else if (p.status === 'pending') {
+                  imageHtml = `<div style="width:200px;height:120px;background:#ccc;display:flex;align-items:center;justify-content:center;font-weight:bold;">PENDING</div><br>`;
+                } else if (p.status === 'rejected') {
+                  imageHtml = `<div style="width:200px;height:120px;background:#f5b5b5;display:flex;align-items:center;justify-content:center;font-weight:bold;">ABGELEHNT</div><br>`;
+                }
+              }
+
+              postsHtml += `
+            <div style="border-top:1px solid #ddd; margin-top:10px; padding-top:10px;">
+              <b>${p.username}</b><br>
+              Post-ID: ${p.id}<br>
+              ${p.content ? 'Text: ' + p.content + '<br><br>' : ''}
+              ${imageHtml}
+              <button onclick="deletePost(${p.id})">Post löschen</button>
+            </div>
+          `;
+            });
+
+            postsHtml += `</div>`;
+          }
+        }
+
         el.innerHTML = `
-  <b>${t.title}</b><br>
-  Thread-ID: ${t.id}<br><br>
-  <button onclick="deleteThread(${t.id})">Thread löschen</button>
-`;
+      <b style="cursor:pointer;" onclick="toggleThread(${t.id})">${t.title}</b><br>
+      Thread-ID: ${t.id}<br><br>
+      <button onclick="toggleThread(${t.id})">${openThreadId === t.id ? 'Zuklappen' : 'Posts anzeigen'}</button>
+      <button onclick="deleteThread(${t.id})">Thread löschen</button>
+      ${postsHtml}
+    `;
 
         container.appendChild(el);
-      });
+      }
     }
 
+
+
+
+    async function toggleThread(id) {
+      if (openThreadId === id) {
+        openThreadId = null;
+      } else {
+        openThreadId = id;
+      }
+
+      await loadThreads();
+    }
+
+
+    async function deletePost(id) {
+      const ok = confirm('Post wirklich löschen?');
+      if (!ok) return;
+
+      await fetch('/api/posts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      await loadThreads();
+      await loadImages();
+    }
 
     async function approve(id) {
       await fetch('/api/images/approve', {
