@@ -1,3 +1,7 @@
+/* INDEX CSS
+- Layout (body, max-width, margin)
+- Threads (Abstand, Hover, Klickfläche)
+*/
 
 body {
   font-family: Arial, sans-serif;
@@ -23,9 +27,14 @@ h1 {
 }
 
 .thread a {
+    display: block;
   text-decoration: none;
   color: #333;
   font-weight: bold;
+}
+
+.thread:hover {
+  background: #f5f5f5;
 }
 
 .thread a:hover {
@@ -46,6 +55,10 @@ button {
 
 
 
+/* THREAD CSS
+- Bilder (max-width, Abstand)
+- Status-Boxen (pending grau, rejected rot)
+*/
 
 .box {
   width: 300px;
