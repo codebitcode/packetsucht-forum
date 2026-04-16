@@ -112,8 +112,7 @@ export default {
                 !url.pathname.startsWith("/Bilder/") &&
                 !url.pathname.includes(".")
             ) {
-                const rawIp = request.headers.get("CF-Connecting-IP") || "";
-                const ip = await sha256(rawIp);
+               const ip = request.headers.get("CF-Connecting-IP") || "";
                 const country = request.cf?.country || "??";
                 const path = url.pathname + url.search;
 
