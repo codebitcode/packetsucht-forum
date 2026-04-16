@@ -92,24 +92,41 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
-        if (
-            request.method === "GET" &&
-            !url.pathname.startsWith("/api") &&
-            !url.pathname.startsWith("/Bilder/") &&
-            !url.pathname.includes(".")
-        ) {
-            const rawIp = request.headers.get("CF-Connecting-IP") || "";
-            const ip = await sha256(rawIp);
-            const country = request.cf?.country || "??";
-            const path = url.pathname + url.search;
+        if (url.pathname === "/test-stats") {
+            try {
+                await env.DB.prepare(`
+                    INSERT INTO stats (ip, country, path, user_id, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                `).bind("test", "CH", "/test-stats", null, Date.now()).run();
 
-            const user = await getLoggedInUser(request, env);
-            const userId = user ? user.id : null;
+                return new Response("ok");
+            } catch (e) {
+                return new Response("test error: " + e.message, { status: 500 });
+            }
+        }
 
-            await env.DB.prepare(`
-                INSERT INTO stats (ip, country, path, user_id, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            `).bind(ip, country, path, userId, Date.now()).run();
+        try {
+            if (
+                request.method === "GET" &&
+                !url.pathname.startsWith("/api") &&
+                !url.pathname.startsWith("/Bilder/") &&
+                !url.pathname.includes(".")
+            ) {
+                const rawIp = request.headers.get("CF-Connecting-IP") || "";
+                const ip = await sha256(rawIp);
+                const country = request.cf?.country || "??";
+                const path = url.pathname + url.search;
+
+                const user = await getLoggedInUser(request, env);
+                const userId = user ? user.id : null;
+
+                await env.DB.prepare(`
+                    INSERT INTO stats (ip, country, path, user_id, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                `).bind(ip, country, path, userId, Date.now()).run();
+            }
+        } catch (e) {
+            console.log("STATS ERROR:", e.message);
         }
 
         if (url.pathname.startsWith("/api/image/")) {
