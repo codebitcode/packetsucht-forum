@@ -168,19 +168,21 @@
       await loadPosts();
       await checkLogin();
 
+      fetch("/api/track-page", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          path: location.host + location.pathname + location.search
+        })
+      }).catch(() => { });
+
       setInterval(async () => {
         await loadPosts();
       }, 5000);
     })();
-    fetch("/api/track-page", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        path: location.host + location.pathname + location.search
-      })
-    }).catch(() => { });
+
   </script>
 
 </body>
