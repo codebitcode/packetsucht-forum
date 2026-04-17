@@ -109,24 +109,28 @@ export default {
             if (
                 request.method === "GET" &&
                 !url.pathname.startsWith("/api") &&
-                !url.pathname.startsWith("/Bilder/") 
+                !url.pathname.startsWith("/Bilder/") &&
+                !url.pathname.includes("favicon") &&
+                !url.pathname.includes("wp-") &&
+                !url.pathname.includes("wordpress")
             ) {
-               const ip = request.headers.get("CF-Connecting-IP") || "";
+                const ip = request.headers.get("CF-Connecting-IP") || "";
                 const country = request.cf?.country || "??";
-                const path = url.pathname + url.search;
+                const path = url.host + url.pathname + url.search;
 
                 const user = await getLoggedInUser(request, env);
                 const userId = user ? user.id : null;
 
                 await env.DB.prepare(`
-                    INSERT INTO stats (ip, country, path, user_id, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                `).bind(ip, country, path, userId, Date.now()).run();
+            INSERT INTO stats (ip, country, path, user_id, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        `).bind(ip, country, path, userId, Date.now()).run();
             }
         } catch (e) {
             console.log("STATS ERROR:", e.message);
         }
 
+        
         if (url.pathname.startsWith("/api/image/")) {
             const fileName = decodeURIComponent(url.pathname.replace("/api/image/", ""));
             const object = await env.IMAGES_BUCKET.get(fileName);
