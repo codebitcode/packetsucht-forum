@@ -1,44 +1,56 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Register - Packetsucht Forum</title>
   <link rel="icon" type="image/png" href="/Bilder/favicon.png">
 </head>
+
 <body>
 
-<h1>Register</h1>
+  <h1>Register</h1>
 
-<form id="registerForm">
-  <input type="text" id="username" placeholder="Username" required>
-  <br><br>
-  <input type="password" id="password" placeholder="Password" required>
-  <br><br>
-  <button type="submit">Register</button>
-</form>
+  <form id="registerForm">
+    <input type="text" id="username" placeholder="Username" required>
+    <br><br>
+    <input type="password" id="password" placeholder="Password" required>
+    <br><br>
+    <button type="submit">Register</button>
+  </form>
 
-<p id="msg"></p>
+  <p id="msg"></p>
 
-<script>
-document.getElementById('registerForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-  const username = document.getElementById('username').value;
-  const password = document.getElementById('password').value;
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
 
-  const res = await fetch('/api/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
 
-  const data = await res.json();
-  document.getElementById('msg').innerText = data.message || '';
+      const data = await res.json();
+      document.getElementById('msg').innerText = data.message || '';
 
-  if (res.ok) {
-    window.location.href = '/login.html';
-  }
-});
-</script>
+      if (res.ok) {
+        window.location.href = '/login.html';
+      }
+    });
+    fetch("/api/track-page", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        path: location.host + location.pathname + location.search
+      })
+    }).catch(() => { });
+  </script>
 
 </body>
+
 </html>
