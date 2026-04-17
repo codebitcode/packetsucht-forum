@@ -105,19 +105,13 @@ export default {
             }
         }
 
-        try {
-            if (
-                request.method === "GET" &&
-                !url.pathname.startsWith("/api") &&
-                !url.pathname.startsWith("/Bilder/") &&
-                !url.pathname.includes("favicon") &&
-                !url.pathname.includes("wp-") &&
-                !url.pathname.includes("wordpress")
-            ) {
+        if (url.pathname === "/api/track-page" && request.method === "POST") {
+            try {
+                const body = await request.json();
+
                 const ip = request.headers.get("CF-Connecting-IP") || "";
                 const country = request.cf?.country || "??";
-                const path = url.host + url.pathname + url.search;
-
+                const path = body?.path || "";
                 const user = await getLoggedInUser(request, env);
                 const userId = user ? user.id : null;
 
@@ -125,12 +119,16 @@ export default {
             INSERT INTO stats (ip, country, path, user_id, created_at)
             VALUES (?, ?, ?, ?, ?)
         `).bind(ip, country, path, userId, Date.now()).run();
+
+                return new Response(JSON.stringify({ success: true }), {
+                    headers: { "Content-Type": "application/json" }
+                });
+            } catch (e) {
+                return new Response("track error: " + e.message, { status: 500 });
             }
-        } catch (e) {
-            console.log("STATS ERROR:", e.message);
         }
 
-        
+
         if (url.pathname.startsWith("/api/image/")) {
             const fileName = decodeURIComponent(url.pathname.replace("/api/image/", ""));
             const object = await env.IMAGES_BUCKET.get(fileName);
