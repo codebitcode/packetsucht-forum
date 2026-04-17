@@ -97,7 +97,7 @@ export default {
                 await env.DB.prepare(`
                     INSERT INTO stats (ip, country, path, user_id, created_at)
                     VALUES (?, ?, ?, ?, ?)
-                `).bind("test", "CH", "/test-stats", null, Date.now()).run();
+                `).bind("test", "CH", "/test-stats", null, Math.floor(Date.now() / 1000)).run();
 
                 return new Response("ok");
             } catch (e) {
@@ -122,7 +122,7 @@ export default {
                 await env.DB.prepare(`
             INSERT INTO stats (ip, country, path, user_id, created_at)
             VALUES (?, ?, ?, ?, ?)
-        `).bind(ip, country, path, userId, Date.now()).run();
+        `).bind(ip, country, path, userId, Math.floor(Date.now() / 1000)).run();
 
                 return new Response(JSON.stringify({ success: true }), {
                     headers: { "Content-Type": "application/json" }
