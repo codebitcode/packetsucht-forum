@@ -7,8 +7,8 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #3327da;
-    color: #000000;
+    background: #4803ca;
+    color: #fdfcfc;
 }
 
 img {
@@ -30,8 +30,8 @@ button {
 
 /* HANDY (default) */
 .container {
-    background-color: rgb(69, 10, 207);
-    color: #000;
+    background-color: rgb(3, 3, 3);
+    color: #fffdfd;
   width: 100%;
   max-width: 100%;
   margin: 0;
