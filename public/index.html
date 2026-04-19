@@ -109,6 +109,22 @@
           path: location.host + location.pathname + location.search
         })
       }).catch(() => { });
+
+      <script>
+console.log("TRACK RUN");
+
+fetch("/api/track-page", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    path: location.host + location.pathname + location.search
+  })
+})
+.then(r => r.text())
+.then(t => console.log("TRACK OK:", t))
+.catch(e => console.log("TRACK ERROR:", e));
+</script>
+    
     </script>
 
 </body>
