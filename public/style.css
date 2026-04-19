@@ -36,6 +36,7 @@ button {
   margin: 20px auto;
 }
 
+
 .banner 
 position: absolut;
 display: transparent;
@@ -57,7 +58,9 @@ display: transparent;
   }
 
   .container {
-    margin: 10px;
+     width: 100%;
+      height: 100%;
+    margin:0px;
     border-radius: 8px;
   }
 }
