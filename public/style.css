@@ -36,7 +36,10 @@ button {
   margin: 20px auto;
 }
 
-.banner {
+.banner 
+position: absolut;
+display: transparent;
+
   width: 100%;
   height: 400px;
   background-image: url('/Bilder/banner.png');
