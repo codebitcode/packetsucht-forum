@@ -29,104 +29,92 @@
 
 
 
-    <script>
+   <script>
+  async function loadThreads() {
+    const res = await fetch('/api/threads');
+    const data = await res.json();
 
-      async function loadThreads() {
-        const res = await fetch('/api/threads');
-        const data = await res.json();
+    const container = document.getElementById('threads');
+    container.innerHTML = '';
 
-        const container = document.getElementById('threads');
-        container.innerHTML = '';
+    data.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'thread';
+      el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
+      container.appendChild(el);
+    });
+  }
 
-        data.forEach(t => {
-          const el = document.createElement('div');
-          el.className = 'thread';
-          el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
-          container.appendChild(el);
-        });
-      }
+  async function createThread() {
+    const title = document.getElementById('titleInput').value.trim();
 
-      async function createThread() {
-        const title = document.getElementById('titleInput').value.trim();
+    if (!title) return;
 
-        if (!title) return;
+    const res = await fetch('/api/threads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title
+      })
+    });
 
-        const res = await fetch('/api/threads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: title
-          })
-        });
+    if (!res.ok) {
+      alert(await res.text());
+      return;
+    }
 
-        if (!res.ok) {
-          alert(await res.text());
-          return;
-        }
+    document.getElementById('titleInput').value = '';
+    loadThreads();
+  }
 
-        document.getElementById('titleInput').value = '';
-        loadThreads();
-      }
+  async function checkLogin() {
+    const res = await fetch('/api/me');
+    const data = await res.json();
 
-      async function checkLogin() {
-        const res = await fetch('/api/me');
-        const data = await res.json();
+    const el = document.getElementById('auth');
 
-        const el = document.getElementById('auth');
+    if (data.loggedIn) {
+      el.innerHTML = `
+        ${data.user.username} |
+        <a href="#" onclick="logout(); return false;">Logout</a>
+      `;
+    } else {
+      el.innerHTML = `
+        <a href="/login.html">Login</a> |
+        <a href="/register.html">Register</a>
+      `;
+    }
+  }
 
-        if (data.loggedIn) {
-          el.innerHTML = `
-      ${data.user.username} |
-      <a href="#" onclick="logout(); return false;">Logout</a>
-    `;
-        } else {
-          el.innerHTML = `
-      <a href="/login.html">Login</a> |
-      <a href="/register.html">Register</a>
-    `;
-        }
-      }
+  async function logout() {
+    await fetch('/api/logout', { method: 'POST' });
+    location.reload();
+  }
 
-      async function logout() {
-        await fetch('/api/logout', { method: 'POST' });
-        location.reload();
-      }
+  (async () => {
+    await loadThreads();
+    await checkLogin();
 
-      (async () => {
-        await loadThreads();
-        await checkLogin();
+    console.log("TRACK RUN");
 
-        setInterval(async () => {
-          await loadThreads();
-        }, 5000);
-      })();
-      fetch("/api/track-page", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          path: location.host + location.pathname + location.search
-        })
-      }).catch(() => { });
+    fetch("/api/track-page", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        path: location.host + location.pathname + location.search
+      })
+    })
+    .then(r => r.text())
+    .then(t => console.log("TRACK OK:", t))
+    .catch(e => console.log("TRACK ERROR:", e));
 
-      <script>
-console.log("TRACK RUN");
-
-fetch("/api/track-page", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    path: location.host + location.pathname + location.search
-  })
-})
-.then(r => r.text())
-.then(t => console.log("TRACK OK:", t))
-.catch(e => console.log("TRACK ERROR:", e));
+    setInterval(async () => {
+      await loadThreads();
+    }, 5000);
+  })();
 </script>
-    
-    </script>
-
 </body>
 
 </html>
