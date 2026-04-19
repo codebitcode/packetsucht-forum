@@ -42,10 +42,9 @@ button {
   background-image: url('/Bilder/banner.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: bottom 0%;
+  background-position: right bottom;
   margin-bottom: 15px;
 }
-
 
 @media (max-width: 700px) {
   .banner {
