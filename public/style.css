@@ -7,7 +7,7 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #4803ca;
+    background: #10002e;
     color: #fdfcfc;
 }
 
@@ -84,13 +84,13 @@ h1 {
 
 .thread {
     padding: 8px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #13025f;
 }
 
 .thread a {
     display: block;
     text-decoration: none;
-    color: #333;
+    color: #181717;
     font-weight: bold;
 }
 
