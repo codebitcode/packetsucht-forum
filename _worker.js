@@ -557,12 +557,14 @@ export default {
                     return new Response("missing data", { status: 400 });
                 }
 
-                await env.DB.prepare(
-                    "INSERT INTO threads (title, user_id) VALUES (?, ?)"
-                )
-                    .bind(title, session.user_id)
-                    .run();
+                const ip = request.headers.get("CF-Connecting-IP") || "";
+                const country = request.cf?.country || "??";
 
+                await env.DB.prepare(
+                    "INSERT INTO threads (title, user_id, ip, country) VALUES (?, ?, ?, ?)"
+                )
+                    .bind(title, session.user_id, ip, country)
+                    .run();
                 return new Response(JSON.stringify({ success: true }), {
                     headers: { "Content-Type": "application/json" },
                 });
