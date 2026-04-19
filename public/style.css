@@ -42,7 +42,7 @@ button {
   background-image: url('/Bilder/banner.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center bottom;
+  background-position: center 70%;
   margin-bottom: 15px;
 }
 
