@@ -150,7 +150,5 @@ h1 {
 }
 
 .post-image {
-    max-width: 300px;
-    display: block;
-    margin-top: 8px;
+  width: 100%;
 }
