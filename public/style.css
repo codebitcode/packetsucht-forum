@@ -5,13 +5,13 @@
 }
 
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background:
-        radial-gradient(circle at top left, rgba(255, 212, 0, 0.08), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(70, 40, 180, 0.10), transparent 35%),
-        #0f0f14;
-    color: #f2f2f2;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(255, 212, 0, 0.08), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(70, 40, 180, 0.10), transparent 35%),
+    #0f0f14;
+  color: #f2f2f2;
 }
 
 img {
@@ -37,13 +37,13 @@ button:hover {
 
 /* HANDY (default) */
 .container {
-    background: #18181f;
-    color: #f2f2f2;
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 15px;
-    border-radius: 0;
+  background: #18181f;
+  color: #f2f2f2;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 15px;
+  border-radius: 0;
 }
 
 /* TABLET */
@@ -90,8 +90,8 @@ h1 {
 }
 
 .thread {
-    padding: 8px;
-    border-bottom: 1px solid #2b2b36;
+   padding: 8px;
+  border-bottom: 1px solid #2b2b36;
 }
 
 .thread a {
