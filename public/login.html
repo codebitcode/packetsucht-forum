@@ -2,121 +2,56 @@
 <html>
 
 <head>
-  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Paketsucht Forum</title>
+  <title>Login - Paketsucht Forum</title>
   <link rel="icon" type="image/png" href="/Bilder/favicon.png">
-  <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
 
-  <div class="banner"></div>
+  <h1>Login</h1>
 
-  <div class="container">
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Username" required>
+    <br><br>
+    <input type="password" id="password" placeholder="Password" required>
+    <br><br>
+    <button type="submit">Login</button>
+  </form>
 
-    <h1>📦 Paketsucht Forum</h1>
-
-    <div id="auth"></div>
-
-    <h2>Neuen Thread erstellen</h2>
-
-    <input id="titleInput" type="text" placeholder="Titel eingeben">
-    <button onclick="createThread()">Absenden</button>
-
-    <h2>Threads</h2>
-
-    <div id="threads"></div>
-  </div>
-
+  <p id="msg"></p>
 
   <script>
-    console.log(window.innerWidth, window.innerHeight)
-    async function loadThreads() {
-      const res = await fetch('/api/threads');
-      const data = await res.json();
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-      const container = document.getElementById('threads');
-      container.innerHTML = '';
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
 
-      data.forEach(t => {
-        const el = document.createElement('div');
-        el.className = 'thread';
-        el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
-        container.appendChild(el);
-      });
-    }
-
-    async function createThread() {
-      const title = document.getElementById('titleInput').value.trim();
-
-      if (!title) return;
-
-      const res = await fetch('/api/threads', {
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title
-        })
+        body: JSON.stringify({ username, password })
       });
 
-      if (!res.ok) {
-        alert(await res.text());
-        return;
-      }
-
-      document.getElementById('titleInput').value = '';
-      loadThreads();
-    }
-
-    async function checkLogin() {
-      const res = await fetch('/api/me');
       const data = await res.json();
+      document.getElementById('msg').innerText = data.message || '';
 
-      const el = document.getElementById('auth');
-
-      if (data.loggedIn) {
-        el.innerHTML = `
-        ${data.user.username} |
-        <a href="#" onclick="logout(); return false;">Logout</a>
-      `;
-      } else {
-        el.innerHTML = `
-        <a href="/login.html">Login</a> |
-        <a href="/register.html">Register</a>
-      `;
+      if (res.ok) {
+        window.location.href = '/';
       }
-    }
-
-    async function logout() {
-      await fetch('/api/logout', { method: 'POST' });
-      location.reload();
-    }
-
-    (async () => {
-      await loadThreads();
-      await checkLogin();
-
-      console.log("TRACK RUN");
-
-      fetch("/api/track-page", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          path: location.host + location.pathname + location.search
-        })
+    });
+    fetch("/api/track-page", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        path: location.host + location.pathname + location.search
       })
-        .then(r => r.text())
-        .then(t => console.log("TRACK OK:", t))
-        .catch(e => console.log("TRACK ERROR:", e));
-
-      setInterval(async () => {
-        await loadThreads();
-      }, 5000);
-    })();
+    }).catch(() => { });
   </script>
+
 </body>
 
 </html>
