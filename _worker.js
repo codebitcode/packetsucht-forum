@@ -630,6 +630,7 @@ export default {
         /////////////////Post
 
         if (url.pathname.startsWith("/api/posts")) {
+
             if (request.method === "GET") {
                 const threadId = Number(url.searchParams.get("thread_id"));
 
@@ -637,14 +638,14 @@ export default {
                     return new Response("thread_id fehlt", { status: 400 });
                 }
 
-                const { results } = await env.DB.prepare(
-                    `SELECT posts.*, users.username, images.status
-FROM posts
-LEFT JOIN users ON posts.user_id = users.id
-LEFT JOIN images ON images.filename = posts.image
-WHERE posts.thread_id = ?
-ORDER BY posts.id ASC`
-                ).bind(threadId).all();
+                const { results } = await env.DB.prepare(`
+             SELECT posts.*, users.username, images.status
+            FROM posts
+            LEFT JOIN users ON posts.user_id = users.id
+            LEFT JOIN images ON images.filename = posts.image
+            WHERE posts.thread_id = ?
+            ORDER BY posts.id ASC
+        `).bind(threadId).all();
 
                 return new Response(JSON.stringify(results), {
                     headers: { "Content-Type": "application/json" },
@@ -656,11 +657,12 @@ ORDER BY posts.id ASC`
 
                 try {
                     body = await request.json();
-                } catch (e) {
+                } catch {
                     return new Response("invalid json", { status: 400 });
                 }
 
                 const { thread_id, content, image } = body || {};
+
                 const cookie = request.headers.get("cookie") || "";
                 const match = cookie.match(/session_id=([^;]+)/);
 
@@ -676,15 +678,17 @@ ORDER BY posts.id ASC`
                     return new Response("invalid session", { status: 401 });
                 }
 
-
                 if (!thread_id || (!content && !image)) {
                     return new Response("missing data", { status: 400 });
                 }
 
+                const ip = request.headers.get("CF-Connecting-IP") || "";
+                const country = request.cf?.country || "??";
+
                 await env.DB.prepare(
-                    "INSERT INTO posts (thread_id, user_id, content, image) VALUES (?, ?, ?, ?)"
+                    "INSERT INTO posts (thread_id, user_id, content, image, ip, country) VALUES (?, ?, ?, ?, ?, ?)"
                 )
-                    .bind(Number(thread_id), session.user_id, content, image || null)
+                    .bind(Number(thread_id), session.user_id, content, image || null, ip, country)
                     .run();
 
                 return new Response(JSON.stringify({ success: true }), {
@@ -694,7 +698,6 @@ ORDER BY posts.id ASC`
 
             return new Response("Method not allowed", { status: 405 });
         }
-
 
         //////////BildUploud
 
@@ -713,6 +716,8 @@ ORDER BY posts.id ASC`
                 const formData = await request.formData();
                 const file = formData.get("file");
                 const threadId = formData.get("thread_id");
+                const ip = request.headers.get("CF-Connecting-IP") || "";
+                const country = request.cf?.country || "??";
 
                 if (!file || typeof file === "string") {
                     return new Response("No file", { status: 400 });
@@ -729,8 +734,8 @@ ORDER BY posts.id ASC`
                 });
 
                 await env.DB.prepare(
-                    "INSERT INTO images (filename, status, user_id, thread_id, image_url) VALUES (?, ?, ?, ?, ?)"
-                ).bind(fileName, "pending", user.id, Number(threadId), imageUrl).run();
+                    "INSERT INTO images (filename, status, user_id, thread_id, image_url, ip, country) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                ).bind(fileName, "pending", user.id, Number(threadId), imageUrl, ip, country).run();
                 return new Response(JSON.stringify({
                     success: true,
                     filename: fileName
