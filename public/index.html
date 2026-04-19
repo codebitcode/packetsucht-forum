@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Packetsucht Forum</title>
   <link rel="icon" type="image/png" href="/Bilder/favicon.png">
   <link rel="stylesheet" href="/style.css">
@@ -30,6 +31,7 @@
 
 
   <script>
+    console.log(window.innerWidth, window.innerHeight)
     async function loadThreads() {
       const res = await fetch('/api/threads');
       const data = await res.json();
