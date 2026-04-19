@@ -9,22 +9,22 @@
 </head>
 
 <body>
+  <div class="container">
+    <h1>📦 Thread</h1>
+    <a href="/index.html">← Zurück</a>
 
-  <h1>📦 Thread</h1>
-  <a href="/index.html">← Zurück</a>
+    <h2 id="threadTitle">Lade...</h2>
 
-  <h2 id="threadTitle">Lade...</h2>
-
-  <div id="posts"></div>
-  <div id="error"></div>
-  <h3>Antwort schreiben</h3>
-  <form id="postForm">
-    <textarea id="content" rows="5" cols="50"></textarea> <br><br>
-    <button type="submit">Posten</button>
-    <input type="file" id="fileInput" accept="image/*">
-    <br><br>
-  </form>
-
+    <div id="posts"></div>
+    <div id="error"></div>
+    <h3>Antwort schreiben</h3>
+    <form id="postForm">
+      <textarea id="content" rows="5" cols="50"></textarea> <br><br>
+      <button type="submit">Posten</button>
+      <input type="file" id="fileInput" accept="image/*">
+      <br><br>
+    </form>
+  </div>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const threadId = urlParams.get('id');
