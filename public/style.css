@@ -47,8 +47,7 @@ display: none;
   background-image: url('/Bilder/banner.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: right bottom;
-  
+  background-position: right bottom; 
 }
 
 @media (max-width: 1100px) {
