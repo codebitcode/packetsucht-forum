@@ -7,7 +7,7 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #0db3c9;
+    background: #3327da;
     color: #000000;
 }
 
@@ -30,7 +30,7 @@ button {
 
 /* HANDY (default) */
 .container {
-    background-color: aqua;
+    background-color: rgb(69, 10, 207);
     color: #000;
   width: 100%;
   max-width: 100%;
