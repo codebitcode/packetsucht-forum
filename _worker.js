@@ -93,10 +93,15 @@ export default {
 
         if (url.pathname === "/test-stats") {
             try {
+                const ip = request.headers.get("CF-Connecting-IP") || "";
+                const country = request.cf?.country || "??";
+                const user = await getLoggedInUser(request, env);
+                const userId = user ? user.id : null;
+
                 await env.DB.prepare(`
                     INSERT INTO stats (ip, country, path, user_id, created_at)
                     VALUES (?, ?, ?, ?, ?)
-                `).bind("test", "CH", "/test-stats", null, Math.floor(Date.now() / 1000)).run();
+                `).bind(ip, country, "/test-stats", userId, Math.floor(Date.now() / 1000)).run();
 
                 return new Response("ok");
             } catch (e) {
