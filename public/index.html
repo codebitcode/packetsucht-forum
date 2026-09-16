@@ -36,22 +36,29 @@
     }
 
     #audioControls button {
-      flex: 1 1 0;
       min-width: 0;
       margin: 0;
       padding: 0;
       border: 0;
       border-radius: 0;
       cursor: pointer;
-      font-size: 15px;
       line-height: 1;
     }
 
     #audioControls button + button {
-      border-left: 1px solid rgba(255,255,255,.16);
+      border-left: 1px solid rgba(255,255,255,.10);
+    }
+
+    #audioPrev,
+    #audioNext {
+      flex: 0 0 13px;
+      width: 13px;
+      font-size: 8px;
+      opacity: .38;
     }
 
     #audioToggle {
+      flex: 1 1 auto;
       font-size: 0 !important;
     }
 
