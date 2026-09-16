@@ -6,83 +6,124 @@
   <title>Admin Analytics</title>
   <link rel="icon" type="image/png" href="/Bilder/favicon.png">
   <style>
-    body{font-family:Arial,sans-serif;background:#0f1015;color:#f5f5f5;margin:0;padding:24px}
-    .wrap{max-width:1200px;margin:auto}
-    a{color:#ffd21a}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#0d0f14;color:#f5f7fb;margin:0;padding:24px}
+    .wrap{max-width:1450px;margin:auto}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+    .back{color:#ffd21a;text-decoration:none;font-weight:700}
+    h1{margin:0;font-size:32px}
+    h2{margin-top:28px}
+    .muted{color:#9da3b4}
     .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:20px 0}
-    button,select{padding:9px 12px;border-radius:8px;border:1px solid #444;background:#1a1c24;color:#fff}
-    button{cursor:pointer;background:#ffd21a;color:#111;font-weight:700}
+    button,select{padding:10px 13px;border-radius:9px;border:1px solid #343847;background:#171a23;color:#fff}
+    button{cursor:pointer;background:#ffd21a;color:#111;font-weight:800;border:none}
+    button:hover{filter:brightness(1.05)}
+    label{display:flex;align-items:center;gap:7px}
     .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
-    .card{background:#171922;border:1px solid #2b2e3a;border-radius:12px;padding:14px}
-    .big{font-size:28px;font-weight:800}
-    table{width:100%;border-collapse:collapse;background:#171922;border-radius:12px;overflow:hidden}
-    th,td{padding:10px;border-bottom:1px solid #2b2e3a;text-align:left;vertical-align:top;font-size:14px}
-    th{background:#20232e;position:sticky;top:0}
-    .own{opacity:.5}
-    .unknown{background:#2a2113}
-    .tag{display:inline-block;padding:3px 7px;border-radius:999px;font-size:12px;font-weight:700;margin-right:4px}
-    .tag-own{background:#263047}.tag-unknown{background:#7b4a00}.tag-user{background:#174f2c}
-    .paths{max-width:420px;word-break:break-word;color:#ccc}
-    .muted{color:#aaa}
+    .card{background:#151821;border:1px solid #2a2f3b;border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+    .big{font-size:30px;font-weight:900;margin-top:4px}
+    .table-wrap{overflow:auto;border:1px solid #2a2f3b;border-radius:14px;background:#151821;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+    table{width:100%;border-collapse:collapse;min-width:1050px}
+    th,td{padding:12px 13px;border-bottom:1px solid #272c37;text-align:left;vertical-align:top;font-size:14px}
+    th{background:#1d222c;color:#fff;position:sticky;top:0;z-index:2;white-space:nowrap}
+    tbody tr:hover{background:#1a1f29}
+    .own{opacity:.6}
+    .unknown{background:#211b11}
+    .unknown:hover{background:#292116}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;margin:2px 4px 2px 0;white-space:nowrap}
+    .tag-own{background:#253047;color:#c9d7ff}
+    .tag-unknown{background:#8a5300;color:#fff0c2}
+    .tag-user{background:#174f2c;color:#cbffd9}
+    .ip{font-family:Consolas,monospace;white-space:nowrap}
+    .paths{max-width:520px;min-width:320px;color:#c7cad3;word-break:break-word;line-height:1.45}
+    .empty{padding:24px;text-align:center;color:#9da3b4}
+    .accounts{max-width:650px}
+    @media(max-width:700px){body{padding:14px}.top{align-items:flex-start;flex-direction:column}h1{font-size:26px}.cards{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <p><a href="/admin.html">← Admin</a></p>
-  <h1>Admin Analytics</h1>
-  <div id="status" class="muted">Lade…</div>
+  <div class="top">
+    <div>
+      <a class="back" href="/admin.html">← Zurück zum Admin</a>
+      <h1>📊 Admin Analytics</h1>
+      <div id="status" class="muted">Lade…</div>
+    </div>
+  </div>
 
   <div class="bar">
-    <label>Zeitraum:</label>
-    <select id="days">
-      <option value="1">1 Tag</option>
-      <option value="3" selected>3 Tage</option>
-      <option value="7">7 Tage</option>
-      <option value="30">30 Tage</option>
-    </select>
+    <label>Zeitraum
+      <select id="days">
+        <option value="1">1 Tag</option>
+        <option value="3" selected>3 Tage</option>
+        <option value="7">7 Tage</option>
+        <option value="30">30 Tage</option>
+      </select>
+    </label>
     <button onclick="loadAnalytics()">Neu laden</button>
-    <label><input type="checkbox" id="unknownOnly"> nur unbekannte IPs</label>
+    <label><input type="checkbox" id="unknownOnly"> Nur unbekannte IPs</label>
   </div>
 
   <div class="cards">
-    <div class="card"><div class="muted">Events</div><div class="big" id="events">-</div></div>
+    <div class="card"><div class="muted">Aufrufe</div><div class="big" id="events">-</div></div>
     <div class="card"><div class="muted">IP-Adressen</div><div class="big" id="ipsCount">-</div></div>
     <div class="card"><div class="muted">Unbekannte IPs</div><div class="big" id="unknownCount">-</div></div>
     <div class="card"><div class="muted">Registrierte Nutzer</div><div class="big" id="usersCount">-</div></div>
   </div>
 
-  <h2>IPs</h2>
-  <table>
-    <thead><tr><th>Status</th><th>IP</th><th>Land</th><th>Aufrufe</th><th>Letzter Zugriff</th><th>User-IDs</th><th>Seiten</th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <h2>IP-Auswertung</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th><th>IP-Adresse</th><th>Land</th><th>Aufrufe</th><th>Erster Zugriff</th><th>Letzter Zugriff</th><th>User-IDs</th><th>Besuchte Seiten</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
 
   <h2>Registrierte Accounts</h2>
-  <table>
-    <thead><tr><th>ID</th><th>Username</th></tr></thead>
-    <tbody id="users"></tbody>
-  </table>
+  <div class="table-wrap accounts">
+    <table style="min-width:520px">
+      <thead><tr><th>ID</th><th>Username</th></tr></thead>
+      <tbody id="users"></tbody>
+    </table>
+  </div>
 </div>
 <script>
 let currentData=null;
-
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-function fmt(ts){if(!ts)return '-'; return new Date(ts*1000).toLocaleString('de-CH');}
+function fmt(ts){if(!ts)return '-';return new Date(ts*1000).toLocaleString('de-CH');}
 
 function render(){
   if(!currentData)return;
   const onlyUnknown=document.getElementById('unknownOnly').checked;
   const rows=document.getElementById('rows');
   rows.innerHTML='';
-  currentData.ips.filter(x=>!onlyUnknown||x.unknown).forEach(x=>{
-    const tr=document.createElement('tr');
-    tr.className=x.unknown?'unknown':'own';
-    const tags=[];
-    tags.push(x.known_own_ip?'<span class="tag tag-own">mit dir verknüpft</span>':'<span class="tag tag-unknown">unbekannt</span>');
-    if(x.registered_other)tags.push('<span class="tag tag-user">anderer Login</span>');
-    tr.innerHTML=`<td>${tags.join('')}</td><td>${esc(x.ip)}</td><td>${esc(x.country)}</td><td>${x.hits}</td><td>${fmt(x.last_seen)}</td><td>${esc(x.user_ids.join(', ')||'-')}</td><td class="paths">${x.paths.map(esc).join('<br>')}</td>`;
-    rows.appendChild(tr);
-  });
+  const list=currentData.ips.filter(x=>!onlyUnknown||x.unknown);
+
+  if(!list.length){
+    rows.innerHTML='<tr><td colspan="8" class="empty">Keine Einträge in diesem Zeitraum.</td></tr>';
+  } else {
+    list.forEach(x=>{
+      const tr=document.createElement('tr');
+      tr.className=x.unknown?'unknown':'own';
+      const tags=[];
+      tags.push(x.known_own_ip?'<span class="tag tag-own">mit dir verknüpft</span>':'<span class="tag tag-unknown">unbekannt</span>');
+      if(x.registered_other)tags.push('<span class="tag tag-user">anderer Login</span>');
+      tr.innerHTML=`
+        <td>${tags.join('')}</td>
+        <td class="ip">${esc(x.ip)}</td>
+        <td>${esc(x.country)}</td>
+        <td><b>${x.hits}</b></td>
+        <td>${fmt(x.first_seen)}</td>
+        <td>${fmt(x.last_seen)}</td>
+        <td>${esc(x.user_ids.join(', ')||'-')}</td>
+        <td class="paths">${x.paths.map(p=>'• '+esc(p)).join('<br>')}</td>`;
+      rows.appendChild(tr);
+    });
+  }
 
   const users=document.getElementById('users');
   users.innerHTML='';
@@ -94,6 +135,7 @@ function render(){
 }
 
 async function loadAnalytics(){
+  document.getElementById('status').textContent='Lade…';
   const me=await fetch('/api/me').then(r=>r.json());
   if(!me.loggedIn||!me.isAdmin){document.getElementById('status').textContent='Kein Zugriff';return;}
   const days=document.getElementById('days').value;
@@ -109,6 +151,7 @@ async function loadAnalytics(){
 }
 
 document.getElementById('unknownOnly').addEventListener('change',render);
+document.getElementById('days').addEventListener('change',loadAnalytics);
 loadAnalytics();
 </script>
 </body>
