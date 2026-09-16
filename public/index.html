@@ -20,16 +20,49 @@
       bottom: -10px;
     }
 
-    #audioToggle {
+    #audioControls {
       position: fixed;
       right: 16px;
       bottom: 16px;
       z-index: 1000;
-      padding: 10px 14px;
+      width: 92px;
+      height: 38px;
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,.22);
       box-shadow: 0 6px 18px rgba(0,0,0,.28);
+    }
+
+    #audioControls button {
+      flex: 1 1 0;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
       cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    #audioControls button + button {
+      border-left: 1px solid rgba(255,255,255,.16);
+    }
+
+    #audioToggle {
+      font-size: 0 !important;
+    }
+
+    #audioToggle[aria-label="Hintergrundmusik abspielen"]::before {
+      content: "▶";
+      font-size: 14px;
+    }
+
+    #audioToggle[aria-label="Hintergrundmusik pausieren"]::before {
+      content: "⏸";
+      font-size: 14px;
     }
   </style>
 </head>
@@ -72,9 +105,24 @@
   </div>
 
   <audio id="ambientPlayer" preload="auto"></audio>
-  <button id="audioToggle" type="button">▶ Play</button>
+  <div id="audioControls" aria-label="Musiksteuerung">
+    <button id="audioPrev" type="button" aria-label="Vorheriges Lied">◀</button>
+    <button id="audioToggle" type="button">▶ Play</button>
+    <button id="audioNext" type="button" aria-label="Nächstes Lied">▶</button>
+  </div>
 
   <script src="/forum.js"></script>
+  <script>
+    document.getElementById('audioPrev').addEventListener('click', () => {
+      const wasPlaying = !player.paused;
+      loadTrack(currentTrackIndex - 1, wasPlaying);
+    });
+
+    document.getElementById('audioNext').addEventListener('click', () => {
+      const wasPlaying = !player.paused;
+      loadTrack(currentTrackIndex + 1, wasPlaying);
+    });
+  </script>
 </body>
 
 </html>
