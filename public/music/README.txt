@@ -1,3 +1,0 @@
-MP3-Dateien hier numerisch ablegen: 01.mp3, 02.mp3, 03.mp3 ...
-Der Player spielt sie automatisch der Reihe nach und beginnt nach dem letzten Titel wieder bei 01.mp3.
-Wenn der Ordner leer ist, wird weiterhin /paketsucht.mp3 verwendet.
