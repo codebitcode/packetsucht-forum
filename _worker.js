@@ -1,4 +1,5 @@
 const ADMIN_NAME = "champ";
+
 async function hashPassword(password) {
     const enc = new TextEncoder();
     const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -28,7 +29,6 @@ async function hashPassword(password) {
 
     return `${saltHex}:${hashHex}`;
 }
-
 
 async function verifyPassword(password, stored) {
     const enc = new TextEncoder();
@@ -61,10 +61,6 @@ async function verifyPassword(password, stored) {
     return newHashHex === hashHex;
 }
 
-
-//////////Admin
-
-
 async function getLoggedInUser(request, env) {
     const cookie = request.headers.get("cookie") || "";
     const match = cookie.match(/session_id=([^;]+)/);
@@ -84,9 +80,12 @@ async function getLoggedInUser(request, env) {
     return user || null;
 }
 
-
-
-
+function json(data, status = 200) {
+    return new Response(JSON.stringify(data), {
+        status,
+        headers: { "Content-Type": "application/json" }
+    });
+}
 
 export default {
     async fetch(request, env) {
@@ -112,7 +111,6 @@ export default {
 
             try {
                 const body = await request.json();
-
                 const ip = request.headers.get("CF-Connecting-IP") || "";
                 const country = request.cf?.country || "??";
                 const path = body?.path || "";
@@ -120,16 +118,105 @@ export default {
                 const userId = user ? user.id : null;
 
                 await env.DB.prepare(`
-            INSERT INTO stats (ip, country, path, user_id, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        `).bind(ip, country, path, userId, Math.floor(Date.now() / 1000)).run();
+                    INSERT INTO stats (ip, country, path, user_id, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                `).bind(ip, country, path, userId, Math.floor(Date.now() / 1000)).run();
 
-                return new Response(JSON.stringify({ success: true }), {
-                    headers: { "Content-Type": "application/json" }
-                });
+                return json({ success: true });
             } catch (e) {
                 return new Response("track error: " + e.message, { status: 500 });
             }
+        }
+
+        if (url.pathname === "/api/admin/analytics" && request.method === "GET") {
+            const user = await getLoggedInUser(request, env);
+
+            if (!user || user.username !== ADMIN_NAME) {
+                return new Response("forbidden", { status: 403 });
+            }
+
+            let days = Number(url.searchParams.get("days") || 3);
+            if (!Number.isFinite(days) || days < 1) days = 3;
+            if (days > 30) days = 30;
+
+            const cutoff = Math.floor(Date.now() / 1000) - Math.floor(days * 86400);
+
+            const { results: recentRows } = await env.DB.prepare(`
+                SELECT id, ip, country, path, user_id, created_at
+                FROM stats
+                WHERE created_at >= ?
+                ORDER BY created_at DESC, id DESC
+            `).bind(cutoff).all();
+
+            const { results: ownIpRows } = await env.DB.prepare(`
+                SELECT DISTINCT ip
+                FROM stats
+                WHERE ip IS NOT NULL
+                  AND ip <> ''
+                  AND (
+                    user_id = ?
+                    OR LOWER(path) LIKE '%/admin%'
+                  )
+            `).bind(user.id).all();
+
+            const { results: users } = await env.DB.prepare(`
+                SELECT id, username
+                FROM users
+                ORDER BY id ASC
+            `).all();
+
+            const ownIps = new Set(ownIpRows.map(r => r.ip));
+            const grouped = new Map();
+
+            for (const row of recentRows) {
+                const ip = row.ip || "(leer)";
+                let item = grouped.get(ip);
+
+                if (!item) {
+                    item = {
+                        ip,
+                        country: row.country || "??",
+                        hits: 0,
+                        first_seen: row.created_at,
+                        last_seen: row.created_at,
+                        user_ids: [],
+                        paths: [],
+                        known_own_ip: ownIps.has(row.ip)
+                    };
+                    grouped.set(ip, item);
+                }
+
+                item.hits += 1;
+                item.first_seen = Math.min(item.first_seen, row.created_at);
+                item.last_seen = Math.max(item.last_seen, row.created_at);
+
+                if (row.user_id != null && !item.user_ids.includes(row.user_id)) {
+                    item.user_ids.push(row.user_id);
+                }
+
+                if (row.path && !item.paths.includes(row.path)) {
+                    item.paths.push(row.path);
+                }
+            }
+
+            const ips = Array.from(grouped.values())
+                .map(item => ({
+                    ...item,
+                    unknown: !item.known_own_ip,
+                    registered_other: item.user_ids.some(id => id !== user.id)
+                }))
+                .sort((a, b) => b.last_seen - a.last_seen);
+
+            return json({
+                days,
+                cutoff,
+                admin_user_id: user.id,
+                total_events: recentRows.length,
+                unique_ips: ips.length,
+                unknown_ips: ips.filter(x => x.unknown).length,
+                ips,
+                users
+            });
         }
 
         if (url.pathname.startsWith("/api/image/")) {
@@ -147,17 +234,12 @@ export default {
             });
         }
 
-
-        ///////////Passwort///////////
-
-
         if (url.pathname.startsWith("/api/register")) {
             if (request.method !== "POST") {
                 return new Response("Method not allowed", { status: 405 });
             }
 
             let body;
-
             try {
                 body = await request.json();
             } catch {
@@ -183,7 +265,6 @@ export default {
 
             try {
                 password_hash = await hashPassword(password);
-
                 result = await env.DB.prepare(
                     "INSERT INTO users (username, password_hash) VALUES (?, ?)"
                 ).bind(username, password_hash).run();
@@ -191,16 +272,11 @@ export default {
                 return new Response("register error: " + e.message, { status: 500 });
             }
 
-            return new Response(JSON.stringify({
+            return json({
                 success: true,
                 user_id: result.meta?.last_row_id ?? null
-            }), {
-                headers: { "Content-Type": "application/json" }
             });
         }
-
-        ///////////Passwort///////////
-        //////Login/////////
 
         if (url.pathname.startsWith("/api/login")) {
             if (request.method !== "POST") {
@@ -208,7 +284,6 @@ export default {
             }
 
             let body;
-
             try {
                 body = await request.json();
             } catch {
@@ -230,7 +305,6 @@ export default {
             }
 
             let ok = false;
-
             try {
                 ok = await verifyPassword(password, user.password_hash);
             } catch (e) {
@@ -265,19 +339,14 @@ export default {
             });
         }
 
-
-        /////////Logout
-
         if (url.pathname === "/api/logout") {
             const cookie = request.headers.get("cookie") || "";
             const match = cookie.match(/session_id=([^;]+)/);
 
             if (match) {
-                const sessionId = match[1];
-
                 await env.DB.prepare(
                     "DELETE FROM sessions WHERE id = ?"
-                ).bind(sessionId).run();
+                ).bind(match[1]).run();
             }
 
             return new Response("ok", {
@@ -287,123 +356,89 @@ export default {
             });
         }
 
-        ////////api/me
-        // /////// ME (eingeloggt prüfen) ///////
-
         if (url.pathname.startsWith("/api/me")) {
             const cookie = request.headers.get("cookie") || "";
             const match = cookie.match(/session_id=([^;]+)/);
 
             if (!match) {
-                return new Response(JSON.stringify({ loggedIn: false }), {
-                    headers: { "Content-Type": "application/json" }
-                });
+                return json({ loggedIn: false });
             }
-
-            const sessionId = match[1];
 
             const session = await env.DB.prepare(
                 "SELECT user_id FROM sessions WHERE id = ?"
-            ).bind(sessionId).first();
+            ).bind(match[1]).first();
 
             if (!session) {
-                return new Response(JSON.stringify({ loggedIn: false }), {
-                    headers: { "Content-Type": "application/json" }
-                });
+                return json({ loggedIn: false });
             }
 
             const user = await env.DB.prepare(
                 "SELECT id, username FROM users WHERE id = ?"
             ).bind(session.user_id).first();
 
-            const isAdmin = user.username === ADMIN_NAME;
+            if (!user) {
+                return json({ loggedIn: false });
+            }
 
-            return new Response(JSON.stringify({
+            return json({
                 loggedIn: true,
                 user,
-                isAdmin
-            }), {
-                headers: { "Content-Type": "application/json" }
+                isAdmin: user.username === ADMIN_NAME
             });
         }
 
-
-        /////////////Admin
-
         if (url.pathname === "/api/images" && request.method === "GET") {
             const user = await getLoggedInUser(request, env);
-
             if (!user || user.username !== ADMIN_NAME) {
                 return new Response("forbidden", { status: 403 });
             }
 
             const status = url.searchParams.get("status") || "pending";
-
             const { results } = await env.DB.prepare(
                 "SELECT * FROM images WHERE status = ? ORDER BY id DESC"
             ).bind(status).all();
 
-            return new Response(JSON.stringify(results), {
-                headers: { "Content-Type": "application/json" }
-            });
+            return json(results);
         }
 
         if (url.pathname === "/api/images/approve" && request.method === "POST") {
             const user = await getLoggedInUser(request, env);
-
             if (!user || user.username !== ADMIN_NAME) {
                 return new Response("forbidden", { status: 403 });
             }
 
             let body;
-
-            try {
-                body = await request.json();
-            } catch {
-                return new Response("invalid json", { status: 400 });
-            }
+            try { body = await request.json(); }
+            catch { return new Response("invalid json", { status: 400 }); }
 
             const { id } = body || {};
-
-            if (!id) {
-                return new Response("missing id", { status: 400 });
-            }
+            if (!id) return new Response("missing id", { status: 400 });
 
             await env.DB.prepare(
                 "UPDATE images SET status = 'approved' WHERE id = ?"
             ).bind(id).run();
 
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" }
-            });
+            return json({ success: true });
         }
 
         if (url.pathname === "/api/images/reject" && request.method === "POST") {
             const user = await getLoggedInUser(request, env);
-
             if (!user || user.username !== ADMIN_NAME) {
                 return new Response("forbidden", { status: 403 });
             }
 
             let body;
-            try {
-                body = await request.json();
-            } catch {
-                return new Response("invalid json", { status: 400 });
-            }
+            try { body = await request.json(); }
+            catch { return new Response("invalid json", { status: 400 }); }
 
             const { id } = body || {};
-            if (!id) {
-                return new Response("missing id", { status: 400 });
-            }
+            if (!id) return new Response("missing id", { status: 400 });
 
             const image = await env.DB.prepare(
                 "SELECT * FROM images WHERE id = ?"
             ).bind(id).first();
 
-            if (!image) {
-                return new Response("image not found", { status: 404 });
-            }
+            if (!image) return new Response("image not found", { status: 404 });
 
             await env.DB.prepare(
                 "DELETE FROM posts WHERE image = ?"
@@ -413,37 +448,27 @@ export default {
                 "UPDATE images SET status = 'rejected' WHERE id = ?"
             ).bind(id).run();
 
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" }
-            });
+            return json({ success: true });
         }
 
         if (url.pathname === "/api/images/delete" && request.method === "POST") {
             const user = await getLoggedInUser(request, env);
-
             if (!user || user.username !== ADMIN_NAME) {
                 return new Response("forbidden", { status: 403 });
             }
 
             let body;
-            try {
-                body = await request.json();
-            } catch {
-                return new Response("invalid json", { status: 400 });
-            }
+            try { body = await request.json(); }
+            catch { return new Response("invalid json", { status: 400 }); }
 
             const { id } = body || {};
-            if (!id) {
-                return new Response("missing id", { status: 400 });
-            }
+            if (!id) return new Response("missing id", { status: 400 });
 
             const image = await env.DB.prepare(
                 "SELECT * FROM images WHERE id = ?"
             ).bind(id).first();
 
-            if (!image) {
-                return new Response("image not found", { status: 404 });
-            }
+            if (!image) return new Response("image not found", { status: 404 });
 
             if (image.filename) {
                 await env.IMAGES_BUCKET.delete(image.filename);
@@ -453,39 +478,27 @@ export default {
                 "DELETE FROM images WHERE id = ?"
             ).bind(id).run();
 
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" }
-            });
+            return json({ success: true });
         }
-
-        /////////////Threads/Delite
 
         if (url.pathname === "/api/threads/delete" && request.method === "POST") {
             const user = await getLoggedInUser(request, env);
-
             if (!user || user.username !== ADMIN_NAME) {
                 return new Response("forbidden", { status: 403 });
             }
 
             let body;
-            try {
-                body = await request.json();
-            } catch {
-                return new Response("invalid json", { status: 400 });
-            }
+            try { body = await request.json(); }
+            catch { return new Response("invalid json", { status: 400 }); }
 
             const { id } = body || {};
-            if (!id) {
-                return new Response("missing id", { status: 400 });
-            }
+            if (!id) return new Response("missing id", { status: 400 });
 
             const thread = await env.DB.prepare(
                 "SELECT * FROM threads WHERE id = ?"
             ).bind(id).first();
 
-            if (!thread) {
-                return new Response("thread not found", { status: 404 });
-            }
+            if (!thread) return new Response("thread not found", { status: 404 });
 
             const { results: images } = await env.DB.prepare(
                 "SELECT * FROM images WHERE thread_id = ?"
@@ -497,112 +510,70 @@ export default {
                 }
             }
 
-            await env.DB.prepare(
-                "DELETE FROM images WHERE thread_id = ?"
-            ).bind(id).run();
+            await env.DB.prepare("DELETE FROM images WHERE thread_id = ?").bind(id).run();
+            await env.DB.prepare("DELETE FROM posts WHERE thread_id = ?").bind(id).run();
+            await env.DB.prepare("DELETE FROM threads WHERE id = ?").bind(id).run();
 
-            await env.DB.prepare(
-                "DELETE FROM posts WHERE thread_id = ?"
-            ).bind(id).run();
-
-            await env.DB.prepare(
-                "DELETE FROM threads WHERE id = ?"
-            ).bind(id).run();
-
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" }
-            });
+            return json({ success: true });
         }
-
-        ////////////threads/////////////////////
-
 
         if (url.pathname.startsWith("/api/threads")) {
             if (request.method === "GET") {
                 const { results } = await env.DB.prepare(
                     "SELECT * FROM threads WHERE id > 2 ORDER BY id DESC"
                 ).all();
-                return new Response(JSON.stringify(results), {
-                    headers: { "Content-Type": "application/json" },
-                });
+                return json(results);
             }
 
             if (request.method === "POST") {
                 let body;
-
-                try {
-                    body = await request.json();
-                } catch (e) {
-                    return new Response("invalid json", { status: 400 });
-                }
+                try { body = await request.json(); }
+                catch { return new Response("invalid json", { status: 400 }); }
 
                 const { title } = body || {};
-
                 const cookie = request.headers.get("cookie") || "";
                 const match = cookie.match(/session_id=([^;]+)/);
 
-                if (!match) {
-                    return new Response("not logged in", { status: 401 });
-                }
+                if (!match) return new Response("not logged in", { status: 401 });
 
                 const session = await env.DB.prepare(
                     "SELECT user_id FROM sessions WHERE id = ?"
                 ).bind(match[1]).first();
 
-                if (!session) {
-                    return new Response("invalid session", { status: 401 });
-                }
-
-                if (!title) {
-                    return new Response("missing data", { status: 400 });
-                }
+                if (!session) return new Response("invalid session", { status: 401 });
+                if (!title) return new Response("missing data", { status: 400 });
 
                 const ip = request.headers.get("CF-Connecting-IP") || "";
                 const country = request.cf?.country || "??";
 
                 await env.DB.prepare(
                     "INSERT INTO threads (title, user_id, ip, country) VALUES (?, ?, ?, ?)"
-                )
-                    .bind(title, session.user_id, ip, country)
-                    .run();
-                return new Response(JSON.stringify({ success: true }), {
-                    headers: { "Content-Type": "application/json" },
-                });
+                ).bind(title, session.user_id, ip, country).run();
+
+                return json({ success: true });
             }
 
             return new Response("Method not allowed", { status: 405 });
         }
 
-
-        /////////////////PostDe;ite
-
-
         if (url.pathname === "/api/posts/delete" && request.method === "POST") {
             const user = await getLoggedInUser(request, env);
-
             if (!user || user.username !== ADMIN_NAME) {
                 return new Response("forbidden", { status: 403 });
             }
 
             let body;
-            try {
-                body = await request.json();
-            } catch {
-                return new Response("invalid json", { status: 400 });
-            }
+            try { body = await request.json(); }
+            catch { return new Response("invalid json", { status: 400 }); }
 
             const { id } = body || {};
-            if (!id) {
-                return new Response("missing id", { status: 400 });
-            }
+            if (!id) return new Response("missing id", { status: 400 });
 
             const post = await env.DB.prepare(
                 "SELECT * FROM posts WHERE id = ?"
             ).bind(id).first();
 
-            if (!post) {
-                return new Response("post not found", { status: 404 });
-            }
+            if (!post) return new Response("post not found", { status: 404 });
 
             if (post.image) {
                 const image = await env.DB.prepare(
@@ -613,7 +584,6 @@ export default {
                     if (image.filename) {
                         await env.IMAGES_BUCKET.delete(image.filename);
                     }
-
                     await env.DB.prepare(
                         "DELETE FROM images WHERE id = ?"
                     ).bind(image.id).run();
@@ -624,62 +594,42 @@ export default {
                 "DELETE FROM posts WHERE id = ?"
             ).bind(id).run();
 
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" }
-            });
+            return json({ success: true });
         }
 
-        /////////////////Post
-
         if (url.pathname.startsWith("/api/posts")) {
-
             if (request.method === "GET") {
                 const threadId = Number(url.searchParams.get("thread_id"));
-
-                if (!threadId) {
-                    return new Response("thread_id fehlt", { status: 400 });
-                }
+                if (!threadId) return new Response("thread_id fehlt", { status: 400 });
 
                 const { results } = await env.DB.prepare(`
-             SELECT posts.*, users.username, images.status
-            FROM posts
-            LEFT JOIN users ON posts.user_id = users.id
-            LEFT JOIN images ON images.filename = posts.image
-            WHERE posts.thread_id = ?
-            ORDER BY posts.id ASC
-        `).bind(threadId).all();
+                    SELECT posts.*, users.username, images.status
+                    FROM posts
+                    LEFT JOIN users ON posts.user_id = users.id
+                    LEFT JOIN images ON images.filename = posts.image
+                    WHERE posts.thread_id = ?
+                    ORDER BY posts.id ASC
+                `).bind(threadId).all();
 
-                return new Response(JSON.stringify(results), {
-                    headers: { "Content-Type": "application/json" },
-                });
+                return json(results);
             }
 
             if (request.method === "POST") {
                 let body;
-
-                try {
-                    body = await request.json();
-                } catch {
-                    return new Response("invalid json", { status: 400 });
-                }
+                try { body = await request.json(); }
+                catch { return new Response("invalid json", { status: 400 }); }
 
                 const { thread_id, content, image } = body || {};
-
                 const cookie = request.headers.get("cookie") || "";
                 const match = cookie.match(/session_id=([^;]+)/);
 
-                if (!match) {
-                    return new Response("not logged in", { status: 401 });
-                }
+                if (!match) return new Response("not logged in", { status: 401 });
 
                 const session = await env.DB.prepare(
                     "SELECT user_id FROM sessions WHERE id = ?"
                 ).bind(match[1]).first();
 
-                if (!session) {
-                    return new Response("invalid session", { status: 401 });
-                }
-
+                if (!session) return new Response("invalid session", { status: 401 });
                 if (!thread_id || (!content && !image)) {
                     return new Response("missing data", { status: 400 });
                 }
@@ -689,19 +639,13 @@ export default {
 
                 await env.DB.prepare(
                     "INSERT INTO posts (thread_id, user_id, content, image, ip, country) VALUES (?, ?, ?, ?, ?, ?)"
-                )
-                    .bind(Number(thread_id), session.user_id, content, image || null, ip, country)
-                    .run();
+                ).bind(Number(thread_id), session.user_id, content, image || null, ip, country).run();
 
-                return new Response(JSON.stringify({ success: true }), {
-                    headers: { "Content-Type": "application/json" },
-                });
+                return json({ success: true });
             }
 
             return new Response("Method not allowed", { status: 405 });
         }
-
-        //////////BildUploud
 
         if (url.pathname === "/api/upload") {
             if (request.method !== "POST") {
@@ -710,10 +654,7 @@ export default {
 
             try {
                 const user = await getLoggedInUser(request, env);
-
-                if (!user) {
-                    return new Response("not logged in", { status: 401 });
-                }
+                if (!user) return new Response("not logged in", { status: 401 });
 
                 const formData = await request.formData();
                 const file = formData.get("file");
@@ -738,12 +679,8 @@ export default {
                 await env.DB.prepare(
                     "INSERT INTO images (filename, status, user_id, thread_id, image_url, ip, country) VALUES (?, ?, ?, ?, ?, ?, ?)"
                 ).bind(fileName, "pending", user.id, Number(threadId), imageUrl, ip, country).run();
-                return new Response(JSON.stringify({
-                    success: true,
-                    filename: fileName
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
+
+                return json({ success: true, filename: fileName });
             } catch (e) {
                 return new Response("UPLOAD ERROR: " + e.message, { status: 500 });
             }
@@ -752,8 +689,3 @@ export default {
         return env.ASSETS.fetch(request);
     },
 };
-async function sha256(text) {
-    const enc = new TextEncoder().encode(text);
-    const hash = await crypto.subtle.digest("SHA-256", enc);
-    return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
