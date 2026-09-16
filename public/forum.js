@@ -1,4 +1,4 @@
-const MEDIA_URL = '/paketsucht.mp4';
+const MEDIA_URL = '/paketsucht.mp3';
 const MEDIA_TIME_KEY = 'paketsucht-media-time';
 const MEDIA_PAUSED_KEY = 'paketsucht-media-manual-pause';
 
@@ -24,13 +24,12 @@ function trackPage() {
 }
 
 function updateAudioButton() {
-  const inThread = currentThreadId !== null;
-  audioToggle.hidden = !inThread;
-
-  if (!inThread) return;
-
+  audioToggle.hidden = false;
   audioToggle.textContent = player.paused ? '▶ Play' : '⏸ Pause';
-  audioToggle.setAttribute('aria-label', player.paused ? 'Hintergrundton abspielen' : 'Hintergrundton pausieren');
+  audioToggle.setAttribute(
+    'aria-label',
+    player.paused ? 'Hintergrundmusik abspielen' : 'Hintergrundmusik pausieren'
+  );
 }
 
 function savePlayerTime() {
@@ -57,17 +56,15 @@ function restorePlayerTime() {
   } catch (_) {}
 }
 
-function tryPlayForThread() {
-  if (manualPaused || currentThreadId === null) {
+function tryPlayAfterInteraction() {
+  if (manualPaused) {
     updateAudioButton();
     return;
   }
 
   const playPromise = player.play();
   if (playPromise && typeof playPromise.catch === 'function') {
-    playPromise.catch(() => {
-      updateAudioButton();
-    });
+    playPromise.catch(() => updateAudioButton());
   }
 }
 
@@ -86,10 +83,11 @@ async function loadThreads() {
     link.href = '/thread.html?id=' + encodeURIComponent(t.id);
     link.textContent = t.title;
 
-    link.addEventListener('click', (event) => {
+    link.addEventListener('click', event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 
       event.preventDefault();
+      tryPlayAfterInteraction();
       openThread(t.id, true);
     });
 
@@ -126,16 +124,16 @@ async function checkOverviewLogin() {
   el.innerHTML = '';
 
   if (data.loggedIn) {
-    const name = document.createTextNode(data.user.username + ' | ');
+    el.appendChild(document.createTextNode(data.user.username + ' | '));
+
     const logoutLink = document.createElement('a');
     logoutLink.href = '#';
     logoutLink.textContent = 'Logout';
-    logoutLink.addEventListener('click', async (event) => {
+    logoutLink.addEventListener('click', async event => {
       event.preventDefault();
       await logout();
     });
 
-    el.appendChild(name);
     el.appendChild(logoutLink);
   } else {
     const login = document.createElement('a');
@@ -237,7 +235,6 @@ async function loadPosts() {
 
 function showOverview(track = false) {
   currentThreadId = null;
-  player.pause();
 
   banner.hidden = false;
   overviewView.hidden = false;
@@ -274,8 +271,6 @@ function openThread(id, pushHistory = false, track = false) {
 
   updateAudioButton();
 
-  tryPlayForThread();
-
   loadThread().catch(console.error);
   loadPosts().catch(console.error);
   checkThreadLogin().catch(console.error);
@@ -299,13 +294,14 @@ function renderCurrentRoute(track = false) {
 
 window.createThread = createThread;
 
-document.getElementById('backToOverview').addEventListener('click', (event) => {
+document.getElementById('backToOverview').addEventListener('click', event => {
   if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
   event.preventDefault();
   navigateOverview();
 });
 
-document.getElementById('postForm').addEventListener('submit', async (event) => {
+document.getElementById('postForm').addEventListener('submit', async event => {
   event.preventDefault();
 
   if (isPosting || currentThreadId === null) return;
@@ -386,8 +382,6 @@ player.addEventListener('ended', () => {
 player.addEventListener('error', updateAudioButton);
 
 audioToggle.addEventListener('click', async () => {
-  if (currentThreadId === null) return;
-
   if (player.paused) {
     manualPaused = false;
     sessionStorage.removeItem(MEDIA_PAUSED_KEY);
@@ -411,6 +405,7 @@ window.addEventListener('popstate', () => {
 window.addEventListener('pagehide', savePlayerTime);
 
 renderCurrentRoute(true);
+updateAudioButton();
 
 setInterval(() => {
   if (currentThreadId === null) {
