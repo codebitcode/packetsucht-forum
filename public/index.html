@@ -7,116 +7,74 @@
   <title>Paketsucht Forum</title>
   <link rel="icon" type="image/png" href="/Bilder/favicon.png">
   <link rel="stylesheet" href="/style.css">
+  <style>
+    [hidden] { display: none !important; }
+
+    #ambientPlayer {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      left: -10px;
+      bottom: -10px;
+    }
+
+    #audioToggle {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 1000;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: 0 6px 18px rgba(0,0,0,.28);
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body>
-
-  <div class="banner"></div>
+  <div id="banner" class="banner"></div>
 
   <div class="container">
+    <section id="overviewView">
+      <h1>📦 Paketsucht Forum</h1>
 
-    <h1>📦 Paketsucht Forum</h1>
+      <div id="auth"></div>
 
-    <div id="auth"></div>
+      <h2>Neuen Thread erstellen</h2>
+      <input id="titleInput" type="text" placeholder="Titel eingeben">
+      <button onclick="createThread()">Absenden</button>
 
-    <h2>Neuen Thread erstellen</h2>
+      <h2>Threads</h2>
+      <div id="threads"></div>
+    </section>
 
-    <input id="titleInput" type="text" placeholder="Titel eingeben">
-    <button onclick="createThread()">Absenden</button>
+    <section id="threadView" hidden>
+      <h1>📦 Thread</h1>
+      <a id="backToOverview" href="/index.html">← Zurück</a>
 
-    <h2>Threads</h2>
+      <h2 id="threadTitle">Lade...</h2>
 
-    <div id="threads"></div>
+      <div id="posts"></div>
+      <div id="error"></div>
+
+      <h3>Antwort schreiben</h3>
+      <form id="postForm">
+        <textarea id="content" rows="5" cols="50"></textarea>
+        <br><br>
+        <button type="submit">Posten</button>
+        <input type="file" id="fileInput" accept="image/*">
+        <br><br>
+      </form>
+    </section>
   </div>
 
+  <video id="ambientPlayer" preload="auto" playsinline></video>
+  <button id="audioToggle" type="button" hidden>▶ Play</button>
 
-  <script>
-    console.log(window.innerWidth, window.innerHeight)
-    async function loadThreads() {
-      const res = await fetch('/api/threads');
-      const data = await res.json();
-
-      const container = document.getElementById('threads');
-      container.innerHTML = '';
-
-      data.forEach(t => {
-        const el = document.createElement('div');
-        el.className = 'thread';
-        el.innerHTML = `<a href="/thread.html?id=${t.id}">${t.title}</a>`;
-        container.appendChild(el);
-      });
-    }
-
-    async function createThread() {
-      const title = document.getElementById('titleInput').value.trim();
-
-      if (!title) return;
-
-      const res = await fetch('/api/threads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title
-        })
-      });
-
-      if (!res.ok) {
-        alert(await res.text());
-        return;
-      }
-
-      document.getElementById('titleInput').value = '';
-      loadThreads();
-    }
-
-    async function checkLogin() {
-      const res = await fetch('/api/me');
-      const data = await res.json();
-
-      const el = document.getElementById('auth');
-
-      if (data.loggedIn) {
-        el.innerHTML = `
-        ${data.user.username} |
-        <a href="#" onclick="logout(); return false;">Logout</a>
-      `;
-      } else {
-        el.innerHTML = `
-        <a href="/login.html">Login</a> |
-        <a href="/register.html">Register</a>
-      `;
-      }
-    }
-
-    async function logout() {
-      await fetch('/api/logout', { method: 'POST' });
-      location.reload();
-    }
-
-    (async () => {
-      await loadThreads();
-      await checkLogin();
-
-      console.log("TRACK RUN");
-
-      fetch("/api/track-page", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          path: location.host + location.pathname + location.search
-        })
-      })
-        .then(r => r.text())
-        .then(t => console.log("TRACK OK:", t))
-        .catch(e => console.log("TRACK ERROR:", e));
-
-      setInterval(async () => {
-        await loadThreads();
-      }, 5000);
-    })();
-  </script>
+  <script src="/forum.js"></script>
 </body>
 
 </html>
