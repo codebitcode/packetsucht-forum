@@ -1,11 +1,15 @@
-const MEDIA_URL = '/paketsucht.mp3';
+const FALLBACK_MEDIA_URL = '/paketsucht.mp3';
+const MUSIC_FOLDER = '/music/';
 const MEDIA_TIME_KEY = 'paketsucht-media-time';
 const MEDIA_PAUSED_KEY = 'paketsucht-media-manual-pause';
+const MEDIA_TRACK_KEY = 'paketsucht-media-track-index';
 
 let currentThreadId = null;
 let isPosting = false;
 let lastSavedSecond = -1;
 let manualPaused = sessionStorage.getItem(MEDIA_PAUSED_KEY) === '1';
+let playlist = [FALLBACK_MEDIA_URL];
+let currentTrackIndex = 0;
 
 const banner = document.getElementById('banner');
 const overviewView = document.getElementById('overviewView');
@@ -40,6 +44,7 @@ function savePlayerTime() {
 
   lastSavedSecond = second;
   localStorage.setItem(MEDIA_TIME_KEY, String(player.currentTime));
+  localStorage.setItem(MEDIA_TRACK_KEY, String(currentTrackIndex));
 }
 
 function restorePlayerTime() {
@@ -54,6 +59,60 @@ function restorePlayerTime() {
   try {
     player.currentTime = saved;
   } catch (_) {}
+}
+
+async function discoverPlaylist() {
+  const found = [];
+
+  for (let i = 1; i <= 99; i++) {
+    const filename = String(i).padStart(2, '0') + '.mp3';
+    const url = MUSIC_FOLDER + filename;
+
+    try {
+      const res = await fetch(url, {
+        method: 'HEAD',
+        cache: 'no-store'
+      });
+
+      const type = (res.headers.get('content-type') || '').toLowerCase();
+      if (!res.ok || (!type.includes('audio') && !type.includes('mpeg') && !type.includes('octet-stream'))) {
+        break;
+      }
+
+      found.push(url);
+    } catch (_) {
+      break;
+    }
+  }
+
+  playlist = found.length ? found : [FALLBACK_MEDIA_URL];
+
+  const savedIndex = Number(localStorage.getItem(MEDIA_TRACK_KEY));
+  currentTrackIndex = Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < playlist.length
+    ? savedIndex
+    : 0;
+
+  player.src = playlist[currentTrackIndex];
+  player.load();
+}
+
+function loadTrack(index, resume = false) {
+  if (!playlist.length) return;
+
+  currentTrackIndex = ((index % playlist.length) + playlist.length) % playlist.length;
+  localStorage.setItem(MEDIA_TRACK_KEY, String(currentTrackIndex));
+  localStorage.removeItem(MEDIA_TIME_KEY);
+  lastSavedSecond = -1;
+
+  player.src = playlist[currentTrackIndex];
+  player.load();
+
+  if (resume && !manualPaused) {
+    const playPromise = player.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => updateAudioButton());
+    }
+  }
 }
 
 function tryPlayAfterInteraction() {
@@ -369,7 +428,6 @@ document.getElementById('postForm').addEventListener('submit', async event => {
   }
 });
 
-player.src = MEDIA_URL;
 player.addEventListener('loadedmetadata', restorePlayerTime);
 player.addEventListener('timeupdate', savePlayerTime);
 player.addEventListener('play', updateAudioButton);
@@ -377,7 +435,7 @@ player.addEventListener('pause', updateAudioButton);
 player.addEventListener('ended', () => {
   localStorage.removeItem(MEDIA_TIME_KEY);
   lastSavedSecond = -1;
-  updateAudioButton();
+  loadTrack(currentTrackIndex + 1, true);
 });
 player.addEventListener('error', updateAudioButton);
 
@@ -406,6 +464,13 @@ window.addEventListener('pagehide', savePlayerTime);
 
 renderCurrentRoute(true);
 updateAudioButton();
+
+discoverPlaylist().catch(() => {
+  playlist = [FALLBACK_MEDIA_URL];
+  currentTrackIndex = 0;
+  player.src = FALLBACK_MEDIA_URL;
+  player.load();
+});
 
 setInterval(() => {
   if (currentThreadId === null) {
