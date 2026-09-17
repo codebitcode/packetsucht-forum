@@ -23,7 +23,7 @@
     .card{background:#151821;border:1px solid #2a2f3b;border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
     .big{font-size:30px;font-weight:900;margin-top:4px}
     .table-wrap{overflow:auto;border:1px solid #2a2f3b;border-radius:14px;background:#151821;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-    table{width:100%;border-collapse:collapse;min-width:1180px}
+    table{width:100%;border-collapse:collapse;min-width:1380px}
     th,td{padding:12px 13px;border-bottom:1px solid #272c37;text-align:left;vertical-align:top;font-size:14px}
     th{background:#1d222c;color:#fff;position:sticky;top:0;z-index:2;white-space:nowrap}
     tbody tr:hover{background:#1a1f29}
@@ -36,7 +36,8 @@
     .tag-user{background:#174f2c;color:#cbffd9}
     .tag-note{background:#624d00;color:#fff2a8}
     .ip{font-family:Consolas,monospace;white-space:nowrap}
-    .paths{max-width:520px;min-width:320px;color:#c7cad3;word-break:break-word;line-height:1.45}
+    .device-info{min-width:185px;line-height:1.45;color:#d8dbe4;white-space:nowrap}
+    .paths{max-width:440px;min-width:300px;color:#c7cad3;word-break:break-word;line-height:1.45}
     .empty{padding:24px;text-align:center;color:#9da3b4}
     .accounts{max-width:650px}
     .note-cell{width:170px;min-width:170px;padding-left:8px;padding-right:8px}
@@ -83,7 +84,7 @@
     <table>
       <thead>
         <tr>
-          <th>Status</th><th>IP-Adresse</th><th>Land</th><th>Aufrufe</th><th>Erster Zugriff</th><th>Letzter Zugriff</th><th>User-IDs</th><th>Besuchte Seiten</th><th>Merken / Notiz</th>
+          <th>Status</th><th>IP-Adresse</th><th>Land</th><th>Aufrufe</th><th>Erster Zugriff</th><th>Letzter Zugriff</th><th>User-IDs</th><th>Gerät</th><th>Besuchte Seiten</th><th>Merken / Notiz</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -102,6 +103,18 @@
 let currentData=null;
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function fmt(ts){if(!ts)return '-';return new Date(ts*1000).toLocaleString('de-CH');}
+function deviceHtml(d){
+  if(!d)return '<span class="muted">noch nicht erfasst</span>';
+  const lines=[];
+  const first=[d.os,d.browser].filter(Boolean).map(esc).join(' · ');
+  const second=[d.device_type,d.language].filter(Boolean).map(esc).join(' · ');
+  if(first)lines.push(first);
+  if(second)lines.push(second);
+  if(d.screen)lines.push('Bildschirm '+esc(d.screen));
+  if(d.viewport)lines.push('Fenster '+esc(d.viewport));
+  if(d.timezone)lines.push(esc(d.timezone));
+  return lines.length?lines.join('<br>'):'<span class="muted">teilweise erfasst</span>';
+}
 
 async function saveIpNote(ip,note,remembered=true){
   const res=await fetch('/api/admin/ip-note',{
@@ -124,7 +137,7 @@ function render(){
   const list=currentData.ips.filter(x=>!onlyUnknown||x.unknown);
 
   if(!list.length){
-    rows.innerHTML='<tr><td colspan="9" class="empty">Keine Einträge in diesem Zeitraum.</td></tr>';
+    rows.innerHTML='<tr><td colspan="10" class="empty">Keine Einträge in diesem Zeitraum.</td></tr>';
   } else {
     list.forEach(x=>{
       const tr=document.createElement('tr');
@@ -141,6 +154,7 @@ function render(){
         <td>${fmt(x.first_seen)}</td>
         <td>${fmt(x.last_seen)}</td>
         <td>${esc(x.user_ids.join(', ')||'-')}</td>
+        <td class="device-info">${deviceHtml(x.device)}</td>
         <td class="paths">${x.paths.map(p=>'• '+esc(p)).join('<br>')}</td>`;
 
       const noteCell=document.createElement('td');
