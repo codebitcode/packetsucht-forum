@@ -23,7 +23,7 @@
     .card{background:#151821;border:1px solid #2a2f3b;border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
     .big{font-size:30px;font-weight:900;margin-top:4px}
     .table-wrap{overflow:auto;border:1px solid #2a2f3b;border-radius:14px;background:#151821;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-    table{width:100%;border-collapse:collapse;min-width:1050px}
+    table{width:100%;border-collapse:collapse;min-width:1320px}
     th,td{padding:12px 13px;border-bottom:1px solid #272c37;text-align:left;vertical-align:top;font-size:14px}
     th{background:#1d222c;color:#fff;position:sticky;top:0;z-index:2;white-space:nowrap}
     tbody tr:hover{background:#1a1f29}
@@ -34,10 +34,17 @@
     .tag-own{background:#253047;color:#c9d7ff}
     .tag-unknown{background:#8a5300;color:#fff0c2}
     .tag-user{background:#174f2c;color:#cbffd9}
+    .tag-note{background:#624d00;color:#fff2a8}
     .ip{font-family:Consolas,monospace;white-space:nowrap}
     .paths{max-width:520px;min-width:320px;color:#c7cad3;word-break:break-word;line-height:1.45}
     .empty{padding:24px;text-align:center;color:#9da3b4}
     .accounts{max-width:650px}
+    .note-cell{min-width:290px}
+    .note-box{display:grid;grid-template-columns:34px minmax(150px,1fr) auto;gap:6px;align-items:center}
+    .remember-btn{width:34px;height:34px;padding:0;border-radius:8px;font-size:19px;background:#2a2e39;color:#83899a}
+    .remember-btn.active{background:#ffd21a;color:#111}
+    .note-input{width:100%;min-width:0;padding:8px 9px;border-radius:8px;border:1px solid #343847;background:#10131a;color:#fff}
+    .save-note{padding:8px 10px;border-radius:8px;white-space:nowrap}
     @media(max-width:700px){body{padding:14px}.top{align-items:flex-start;flex-direction:column}h1{font-size:26px}.cards{grid-template-columns:1fr 1fr}}
   </style>
 </head>
@@ -76,7 +83,7 @@
     <table>
       <thead>
         <tr>
-          <th>Status</th><th>IP-Adresse</th><th>Land</th><th>Aufrufe</th><th>Erster Zugriff</th><th>Letzter Zugriff</th><th>User-IDs</th><th>Besuchte Seiten</th>
+          <th>Status</th><th>IP-Adresse</th><th>Land</th><th>Aufrufe</th><th>Erster Zugriff</th><th>Letzter Zugriff</th><th>User-IDs</th><th>Besuchte Seiten</th><th>Merken / Notiz</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -96,6 +103,19 @@ let currentData=null;
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function fmt(ts){if(!ts)return '-';return new Date(ts*1000).toLocaleString('de-CH');}
 
+async function saveIpNote(ip,note,remembered=true){
+  const res=await fetch('/api/admin/ip-note',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ip,note,remembered})
+  });
+  if(!res.ok){
+    alert('Speichern fehlgeschlagen: '+await res.text());
+    return false;
+  }
+  return true;
+}
+
 function render(){
   if(!currentData)return;
   const onlyUnknown=document.getElementById('unknownOnly').checked;
@@ -104,7 +124,7 @@ function render(){
   const list=currentData.ips.filter(x=>!onlyUnknown||x.unknown);
 
   if(!list.length){
-    rows.innerHTML='<tr><td colspan="8" class="empty">Keine Einträge in diesem Zeitraum.</td></tr>';
+    rows.innerHTML='<tr><td colspan="9" class="empty">Keine Einträge in diesem Zeitraum.</td></tr>';
   } else {
     list.forEach(x=>{
       const tr=document.createElement('tr');
@@ -112,6 +132,7 @@ function render(){
       const tags=[];
       tags.push(x.known_own_ip?'<span class="tag tag-own">mit dir verknüpft</span>':'<span class="tag tag-unknown">unbekannt</span>');
       if(x.registered_other)tags.push('<span class="tag tag-user">anderer Login</span>');
+      if(x.remembered)tags.push('<span class="tag tag-note">★ gemerkt</span>');
       tr.innerHTML=`
         <td>${tags.join('')}</td>
         <td class="ip">${esc(x.ip)}</td>
@@ -121,6 +142,53 @@ function render(){
         <td>${fmt(x.last_seen)}</td>
         <td>${esc(x.user_ids.join(', ')||'-')}</td>
         <td class="paths">${x.paths.map(p=>'• '+esc(p)).join('<br>')}</td>`;
+
+      const noteCell=document.createElement('td');
+      noteCell.className='note-cell';
+      const box=document.createElement('div');
+      box.className='note-box';
+
+      const remember=document.createElement('button');
+      remember.type='button';
+      remember.className='remember-btn'+(x.remembered?' active':'');
+      remember.textContent=x.remembered?'★':'☆';
+      remember.title=x.remembered?'IP nicht mehr merken':'IP merken';
+
+      const input=document.createElement('input');
+      input.type='text';
+      input.className='note-input';
+      input.placeholder='Notiz zur IP';
+      input.maxLength=500;
+      input.value=x.note||'';
+
+      const save=document.createElement('button');
+      save.type='button';
+      save.className='save-note';
+      save.textContent='Speichern';
+
+      remember.addEventListener('click',async()=>{
+        const ok=await saveIpNote(x.ip,input.value,!x.remembered);
+        if(ok)await loadAnalytics();
+      });
+
+      save.addEventListener('click',async()=>{
+        const ok=await saveIpNote(x.ip,input.value,true);
+        if(ok)await loadAnalytics();
+      });
+
+      input.addEventListener('keydown',async e=>{
+        if(e.key==='Enter'){
+          e.preventDefault();
+          const ok=await saveIpNote(x.ip,input.value,true);
+          if(ok)await loadAnalytics();
+        }
+      });
+
+      box.appendChild(remember);
+      box.appendChild(input);
+      box.appendChild(save);
+      noteCell.appendChild(box);
+      tr.appendChild(noteCell);
       rows.appendChild(tr);
     });
   }
