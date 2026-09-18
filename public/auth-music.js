@@ -3,6 +3,7 @@ const MUSIC_FOLDER = '/music/';
 const MEDIA_TIME_KEY = 'paketsucht-media-time';
 const MEDIA_PAUSED_KEY = 'paketsucht-media-manual-pause';
 const MEDIA_TRACK_KEY = 'paketsucht-media-track-index';
+const MEDIA_PLAYING_KEY = 'paketsucht-media-playing';
 
 const player = document.getElementById('ambientPlayer');
 const audioToggle = document.getElementById('audioToggle');
@@ -63,7 +64,8 @@ async function discoverPlaylist() {
   player.src = playlist[currentTrackIndex];
   player.load();
 
-  if (!manualPaused) {
+  const shouldResume = sessionStorage.getItem(MEDIA_PLAYING_KEY) === '1' && !manualPaused;
+  if (shouldResume) {
     try { await player.play(); } catch (_) {}
   }
   updateAudioButton();
@@ -87,7 +89,10 @@ function loadTrack(index, resume = false) {
 
 player.addEventListener('loadedmetadata', restorePlayerTime);
 player.addEventListener('timeupdate', savePlayerTime);
-player.addEventListener('play', updateAudioButton);
+player.addEventListener('play', () => {
+  sessionStorage.setItem(MEDIA_PLAYING_KEY, '1');
+  updateAudioButton();
+});
 player.addEventListener('pause', updateAudioButton);
 player.addEventListener('ended', () => {
   localStorage.removeItem(MEDIA_TIME_KEY);
@@ -100,10 +105,14 @@ audioToggle.addEventListener('click', async () => {
   if (player.paused) {
     manualPaused = false;
     sessionStorage.removeItem(MEDIA_PAUSED_KEY);
-    try { await player.play(); } catch (_) {}
+    try {
+      await player.play();
+      sessionStorage.setItem(MEDIA_PLAYING_KEY, '1');
+    } catch (_) {}
   } else {
     manualPaused = true;
     sessionStorage.setItem(MEDIA_PAUSED_KEY, '1');
+    sessionStorage.setItem(MEDIA_PLAYING_KEY, '0');
     player.pause();
   }
   updateAudioButton();
