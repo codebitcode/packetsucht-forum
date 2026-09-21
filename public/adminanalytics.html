@@ -135,7 +135,7 @@ function render(){
   const onlyUnknown=document.getElementById('unknownOnly').checked;
   const rows=document.getElementById('rows');
   rows.innerHTML='';
-  const list=currentData.ips.filter(x=>!onlyUnknown||x.unknown);
+  const list=currentData.ips.filter(x=>x.remembered||!onlyUnknown||x.unknown);
 
   if(!list.length){
     rows.innerHTML='<tr><td colspan="9" class="empty">Keine Einträge in diesem Zeitraum.</td></tr>';
