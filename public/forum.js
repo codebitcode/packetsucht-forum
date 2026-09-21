@@ -135,6 +135,15 @@ function tryPlayAfterInteraction() {
   }
 }
 
+function cleanThreadTitle(title) {
+  return String(title || '').replace(/^\s*\d{1,3}\s*[-–—.:]\s*/, '').trim();
+}
+
+function numberedThreadTitle(threads, index) {
+  const number = String(threads.length - index).padStart(2, '0');
+  return number + '- ' + cleanThreadTitle(threads[index]?.title);
+}
+
 async function loadThreads() {
   const res = await fetch('/api/threads');
   const data = await res.json();
@@ -142,13 +151,13 @@ async function loadThreads() {
   const container = document.getElementById('threads');
   container.innerHTML = '';
 
-  data.forEach(t => {
+  data.forEach((t, index) => {
     const row = document.createElement('div');
     row.className = 'thread';
 
     const link = document.createElement('a');
     link.href = '/thread.html?id=' + encodeURIComponent(t.id);
-    link.textContent = t.title;
+    link.textContent = numberedThreadTitle(data, index);
 
     link.addEventListener('click', event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -229,11 +238,13 @@ async function loadThread() {
   const requestedId = String(currentThreadId);
   const res = await fetch('/api/threads');
   const threads = await res.json();
-  const thread = threads.find(t => String(t.id) === requestedId);
+  const threadIndex = threads.findIndex(t => String(t.id) === requestedId);
 
   if (String(currentThreadId) !== requestedId) return;
 
-  document.getElementById('threadTitle').textContent = thread ? thread.title : 'Thread nicht gefunden';
+  document.getElementById('threadTitle').textContent = threadIndex >= 0
+    ? numberedThreadTitle(threads, threadIndex)
+    : 'Thread nicht gefunden';
 }
 
 async function checkThreadLogin() {
