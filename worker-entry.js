@@ -6,7 +6,7 @@ const ADMIN_NAME = 'champ';
 // 17 ist bewusst NICHT dabei (Odmis).
 const OWN_USER_IDS = new Set([
   2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-  18, 19, 20
+  19, 20
 ]);
 const OWN_USER_IDS_SQL = Array.from(OWN_USER_IDS).join(',');
 
@@ -305,47 +305,22 @@ export default {
         }
       }
 
-      // Aktuelle und gemerkte Zeilen über die IP zusammenführen:
-      // Ein Favorit erscheint also nie doppelt.
-      const combined = new Map(currentRows.map(item => [item.ip, item]));
+      // Erst ganz normal die aktuellen Zeilen aus dem gewählten Zeitraum.
+      // Wenn eine davon Favorit ist, ist sie durch currentRows bereits mit Stern/Notiz markiert.
+      // Sie bleibt aber eine normale Zeitraum-Zeile: Hits, Zeiten und Seiten werden NICHT
+      // durch die komplette Historie ersetzt.
+      const currentIps = new Set(currentRows.map(item => item.ip));
+      const persistentFavorites = [];
 
+      // Nur Favoriten, die im aktuellen Zeitraum NICHT vorkommen, hinten anhängen.
+      // Dadurch bleibt jeder Favorit dauerhaft sichtbar, aber keine IP erscheint doppelt.
       for (const [ip, historic] of favoriteRows) {
-        const current = combined.get(ip);
-
-        if (!current) {
-          combined.set(ip, classify(historic));
-          continue;
-        }
-
-        const firstSeenValues = [current.first_seen, historic.first_seen].filter(v => v != null);
-        const lastSeenValues = [current.last_seen, historic.last_seen].filter(v => v != null);
-
-        combined.set(ip, classify({
-          ...current,
-          country: historic.country && historic.country !== '??' ? historic.country : current.country,
-          hits: historic.hits || current.hits,
-          first_seen: firstSeenValues.length ? Math.min(...firstSeenValues) : null,
-          last_seen: lastSeenValues.length ? Math.max(...lastSeenValues) : null,
-          user_ids: Array.from(new Set([
-            ...(historic.user_ids || []),
-            ...(current.user_ids || [])
-          ])),
-          paths: Array.from(new Set([
-            ...(current.paths || []),
-            ...(historic.paths || [])
-          ])),
-          remembered: true,
-          note: historic.note || '',
-          note_updated_at: historic.note_updated_at || null
-        }));
+        if (currentIps.has(ip)) continue;
+        persistentFavorites.push(classify(historic));
       }
 
-      // Favoriten oben, danach wie bisher nach letztem Zugriff.
-      data.ips = Array.from(combined.values()).sort((a, b) => {
-        const favoriteDiff = Number(Boolean(b.remembered)) - Number(Boolean(a.remembered));
-        if (favoriteDiff) return favoriteDiff;
-        return (b.last_seen || 0) - (a.last_seen || 0);
-      });
+      persistentFavorites.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+      data.ips = [...currentRows, ...persistentFavorites];
 
       return json(data);
     }
